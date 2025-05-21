@@ -1,0 +1,513 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// ======================
+// CONFIGURATION
+// ======================
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ======================
+// ENUMS
+// ======================
+enum Role {
+  USER
+  ADMIN
+  MODERATOR
+}
+
+enum ProfessionalType {
+  PSYCHOLOGIST
+  DOCTOR
+  NURSE
+  SOCIAL_WORKER
+  COUNSELOR
+}
+
+enum AppointmentStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+}
+
+enum AppointmentType {
+  HEALTH
+  PSYCHOLOGICAL
+  SOCIAL
+}
+
+enum SubscriptionStatus {
+  PENDING
+  ACTIVE
+  WAITLIST
+  CANCELLED
+}
+
+enum RegistrationStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+}
+
+enum AnnouncementType {
+  JOB
+  TRAINING
+  EVENT
+}
+
+enum AnnouncementStatus {
+  PENDING
+  ACTIVE
+  INACTIVE
+  DRAFT
+  EXPIRED
+}
+
+enum ApplicationStatus {
+  PENDING
+  REVIEWED
+  CONTACTED
+  REJECTED
+}
+
+enum ResourceCategory {
+  RELATIONSHIPS
+  SELF_ESTEEM
+  MENSTRUAL_HEALTH
+  CONSENT
+  ABSTINENCE
+  MENSTRUAL_CYCLE
+}
+
+enum NotificationType {
+  SYSTEM
+  APPOINTMENT
+  GROUP
+  WORKSHOP
+  ANNOUNCEMENT
+  EMERGENCY
+}
+
+enum FlowIntensity {
+  LIGHT
+  MEDIUM
+  HEAVY
+}
+
+// ======================
+// MAIN MODELS
+// ======================
+
+// ----------------------
+// User Related Models
+// ----------------------
+model User {
+  id                String              @id @default(cuid())
+  email             String              @unique
+  password          String
+  firstName         String
+  lastName          String
+  phoneNumber       String?
+  role              Role                @default(USER)
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  
+  // Relations
+  profile           Profile?
+  preferences       UserPreference?
+  appointments      Appointment[]
+  groupSubscriptions GroupSubscription[]
+  workshopRegistrations WorkshopRegistration[]
+  jobApplications   JobApplication[]
+  notifications     Notification[]
+  emergencyContacts EmergencyContact[]
+  cycleData         CycleData[]
+}
+
+model Profile {
+  id                String    @id @default(cuid())
+  userId            String    @unique
+  dateOfBirth       DateTime?
+  address           String?
+  city              String?
+  country           String    @default("Gabon")
+  bio               String?
+  avatarUrl         String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  
+  // Relations
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model UserPreference {
+  id                String    @id @default(cuid())
+  userId            String    @unique
+  emailNotifications Boolean   @default(true)
+  smsNotifications   Boolean   @default(false)
+  language          String    @default("fr")
+  theme             String    @default("light")
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  
+  // Relations
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model EmergencyContact {
+  id                String    @id @default(cuid())
+  userId            String
+  name              String
+  relationship      String
+  phoneNumber       String
+  email             String?
+  isActive          Boolean   @default(true)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  
+  // Relations
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model CycleData {
+  id                String    @id @default(cuid())
+  userId            String
+  date              DateTime
+  periodStart       Boolean   @default(false)
+  periodEnd         Boolean   @default(false)
+  symptoms          String?
+  flow              FlowIntensity?
+  notes             String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  
+  // Relations
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// ----------------------
+// Professional Related Models
+// ----------------------
+model Professional {
+  id                String    @id @default(cuid())
+  email             String    @unique
+  password          String
+  firstName         String
+  lastName          String
+  phoneNumber       String?
+  specialization    String
+  bio               String
+  avatarUrl         String?
+  availability      Json?
+  isVerified        Boolean   @default(false)
+  professionalType  ProfessionalType
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  
+  // Relations
+  workshops         Workshop[]
+  supportGroups     SupportGroup[]
+  appointments      Appointment[]
+}
+
+// ----------------------
+// Appointment System
+// ----------------------
+model Appointment {
+  id                String    @id @default(cuid())
+  date              DateTime
+  duration          Int       // Durée en minutes
+  status            AppointmentStatus @default(PENDING)
+  notes             String?
+  type              AppointmentType
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  // Champs pour prise de rendez-vous public
+  nom               String?
+  email             String?
+  telephone         String?
+
+  // Relations
+  userId            String
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  healthCenterId    String?
+  healthCenter      HealthCenter? @relation(fields: [healthCenterId], references: [id], onDelete: Cascade)
+  professionalId    String?
+  professional      Professional? @relation(fields: [professionalId], references: [id], onDelete: Cascade)
+}
+// ----------------------
+// Support Groups System
+// ----------------------
+model SupportGroup {
+  id                String    @id @default(cuid())
+  name              String
+  description       String
+  maxParticipants   Int
+  schedule          String
+  location          String
+  startDate         DateTime
+  endDate           DateTime?
+  imageUrl          String?
+  isActive          Boolean   @default(true)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  
+  // Relations
+  facilitatorId     String
+  facilitator       Professional @relation(fields: [facilitatorId], references: [id])
+  subscriptions     GroupSubscription[]
+}
+
+model GroupSubscription {
+  id                String    @id @default(cuid())
+  status            SubscriptionStatus @default(PENDING)
+  joinedAt          DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  notes             String?
+  
+  // Relations
+  userId            String
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  groupId           String
+  group             SupportGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, groupId])
+}
+
+// ----------------------
+// Workshop System
+// ----------------------
+model Workshop {
+  id                String    @id @default(cuid())
+  title             String
+  description       String
+  maxParticipants   Int
+  date              DateTime
+  duration          Int       // Durée en minutes
+  location          String
+  imageUrl          String?
+  isActive          Boolean   @default(true)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  
+  // Relations
+  facilitatorId     String
+  facilitator       Professional @relation(fields: [facilitatorId], references: [id])
+  registrations     WorkshopRegistration[]
+}
+
+model WorkshopRegistration {
+  id                String    @id @default(cuid())
+  status            RegistrationStatus @default(PENDING)
+  registeredAt      DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  notes             String?
+  
+  // Relations
+  userId            String
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workshopId        String
+  workshop          Workshop  @relation(fields: [workshopId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, workshopId])
+}
+
+// ----------------------
+// Organization & Announcements
+// ----------------------
+model Organization {
+  id                String    @id @default(cuid())
+  name              String
+  email             String    @unique
+  password          String
+  phoneNumber       String?
+  address           String?
+  city              String?
+  country           String    @default("Gabon")
+  description       String?
+  logoUrl           String?
+  website           String?
+  isVerified        Boolean   @default(false)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  
+  // Relations
+  announcements     Announcement[]
+}
+
+model Announcement {
+  id                String    @id @default(cuid())
+  title             String
+  description       String
+  content           String?
+  type              AnnouncementType
+  location          String?
+  startDate         DateTime
+  endDate           DateTime?
+  imageUrl          String?
+  status            AnnouncementStatus @default(PENDING)
+  views             Int       @default(0)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  details           Json?
+  
+  // Relations
+  organizationId    String
+  organization      Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  applications      JobApplication[]
+}
+
+model JobApplication {
+  id                String    @id @default(cuid())
+  coverLetter       String
+  cvUrl             String?
+  status            ApplicationStatus @default(PENDING)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  
+  // Relations
+  userId            String
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  announcementId    String
+  announcement      Announcement @relation(fields: [announcementId], references: [id], onDelete: Cascade)
+}
+
+// ----------------------
+// Educational Resources
+// ----------------------
+model EducationalResource {
+  id                String    @id @default(cuid())
+  title             String
+  description       String
+  content           String
+  category          ResourceCategory
+  imageUrl          String?
+  documentUrl       String?
+  videoUrl          String?
+  isPublished       Boolean   @default(true)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+}
+
+// ----------------------
+// Notification System
+// ----------------------
+model Notification {
+  id                String    @id @default(cuid())
+  title             String
+  message           String
+  type              NotificationType
+  isRead            Boolean   @default(false)
+  link              String?
+  createdAt         DateTime  @default(now())
+  
+  // Relations
+  userId            String
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// ----------------------
+// Health Centers
+// ----------------------
+model HealthCenter {
+  id                String    @id @default(cuid())
+  name              String
+  address           String
+  city              String
+  phoneNumber       String?
+  email             String?
+  website           String?
+  services          String?
+  description       String?
+  imageUrl          String?
+  latitude          Float?
+  longitude         Float?
+  isVerified        Boolean   @default(true)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  // Nouvelle relation
+  appointments      Appointment[]
+}
+
+// ----------------------
+// Chat System
+// ----------------------
+model ChatMessage {
+  id                String    @id @default(cuid())
+  senderId          String    // ID de l'utilisateur ou "system" pour les messages système
+  content           String
+  isEmergency       Boolean   @default(false)
+  createdAt         DateTime  @default(now())
+}
+
+// ----------------------
+// Volunteer Model
+// ----------------------
+model Volunteer {
+  id          String   @id @default(cuid())
+  firstName   String?  // Prénom (optional)
+  lastName    String   // Nom (required)
+  email       String?  // Email (optional)
+  phone       String?  // Téléphone (optional)
+  city        String?  // Ville (optional)
+  country     String?  // Pays (optional)
+  domain      String?  // Domaine d'intervention (optional)
+  skills      String?  // Compétences spécifiques (optional)
+  experience  String?  // Expérience bénévole (optional)
+  motivation  String   // Motivation (required)
+  availability String? // Disponibilité (optional, JSON string)
+  cvUrl       String?  // Lien vers le CV (optionnel, à gérer si upload)
+  createdAt   DateTime @default(now())
+}
+
+model Partner {
+  id          String   @id @default(cuid())
+  organisationName String
+  contactName String
+  email       String   @unique
+  password    String
+  phone       String?
+  address     String?
+  city        String?
+  country     String?  @default("Gabon")
+  organisationType String?
+  description String?
+  website     String?
+  partnershipType String? // Stocké en JSON string
+  acceptTerms Boolean @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Donation {
+  id            String   @id @default(cuid())
+  fullName      String
+  phone         String
+  ville         String
+  amount        Int
+  moyenPaiement String
+  message       String?
+  receiptNeeded Boolean  @default(false)
+   createdAt     DateTime @default(now())
+}
+
+model PublicAppointment {
+  id         String   @id @default(cuid())
+  nom        String
+  email      String
+  telephone  String
+  motif      String
+  date       DateTime
+  heure      String
+  createdAt  DateTime @default(now())
+}
