@@ -15,40 +15,79 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import Image from "next/image"
-import { type Annonce, getAnnonceById, deleteAnnonce, getCandidaturesByAnnonce } from "@/lib/store"
 import { useRouter } from "next/navigation"
 import { useToast } from "@/hooks/use-toast"
+
+// Nouveau type pour l'annonce (adapter selon le schéma API)
+type Organization = {
+  id: string
+  name: string
+  logoUrl?: string
+  website?: string
+  description?: string
+}
+
+type AnnonceAPI = {
+  id: string
+  titre: string
+  description: string
+  type: string
+  status: string
+  image?: string
+  organisation?: string
+  vues?: number
+  contenu?: string
+  createdAt?: string
+  organization?: Organization
+}
 
 export default function AnnoncePage({ params }: { params: { id: string } }) {
   const router = useRouter()
   const { toast } = useToast()
-  const [annonce, setAnnonce] = useState<Annonce | null>(null)
+  const [annonce, setAnnonce] = useState<AnnonceAPI | null>(null)
   const [candidaturesCount, setCandidaturesCount] = useState(0)
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    // Récupérer les détails de l'annonce
-    const annonceDetails = getAnnonceById(params.id)
-    if (annonceDetails) {
-      setAnnonce(annonceDetails)
-      
-      // Récupérer le nombre de candidatures
-      const candidatures = getCandidaturesByAnnonce(params.id)
-      setCandidaturesCount(candidatures.length)
+    async function fetchAnnonce() {
+      setIsLoading(true)
+      try {
+        const res = await fetch(`/api/announcements/${params.id}`)
+        if (!res.ok) throw new Error("Erreur lors du chargement de l'annonce")
+        const data = await res.json()
+        setAnnonce(data)
+        // Charger le nombre de candidatures (si une route API existe)
+        const resC = await fetch(`/api/announcements/${params.id}/candidatures`)
+        if (resC.ok) {
+          const candidatures = await resC.json()
+          setCandidaturesCount(Array.isArray(candidatures) ? candidatures.length : 0)
+        } else {
+          setCandidaturesCount(0)
+        }
+      } catch (e) {
+        setAnnonce(null)
+        setCandidaturesCount(0)
+      } finally {
+        setIsLoading(false)
+      }
     }
-    setIsLoading(false)
+    fetchAnnonce()
   }, [params.id])
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (confirm("Êtes-vous sûr de vouloir supprimer cette annonce ?")) {
-      const success = deleteAnnonce(params.id)
-      if (success) {
-        toast({
-          title: "Annonce supprimée",
-          description: "L'annonce a été supprimée avec succès",
-        })
-        router.push("/partenaires/annonces")
-      } else {
+      try {
+        const res = await fetch(`/api/announcements/${params.id}`, { method: "DELETE" })
+        if (res.ok) {
+          toast({
+            title: "Annonce supprimée",
+            description: "L'annonce a été supprimée avec succès",
+          })
+          router.push("/partenaires/annonces")
+        } else {
+          throw new Error()
+        }
+      } catch {
         toast({
           title: "Erreur",
           description: "Une erreur est survenue lors de la suppression de l'annonce",
@@ -216,7 +255,7 @@ export default function AnnoncePage({ params }: { params: { id: string } }) {
             <CardContent>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="bg-muted/20 p-4 rounded-lg text-center">
-                  <p className="text-3xl font-bold">{annonce.vues}</p>
+                  <p className="text-3xl font-bold">{typeof annonce.vues === "number" ? annonce.vues : 0}</p>
                   <p className="text-sm text-muted-foreground">Vues</p>
                 </div>
                 <div className="bg-muted/20 p-4 rounded-lg text-center">
@@ -225,7 +264,7 @@ export default function AnnoncePage({ params }: { params: { id: string } }) {
                 </div>
                 <div className="bg-muted/20 p-4 rounded-lg text-center">
                   <p className="text-3xl font-bold">
-                    {annonce.vues > 0 ? Math.round((candidaturesCount / annonce.vues) * 100) : 0}%
+                    {typeof annonce.vues === "number" && annonce.vues > 0 ? Math.round((candidaturesCount / annonce.vues) * 100) : 0}%
                   </p>
                   <p className="text-sm text-muted-foreground">Taux de conversion</p>
                 </div>
@@ -250,4 +289,53 @@ export default function AnnoncePage({ params }: { params: { id: string } }) {
             </CardHeader>
             <CardContent>
               {candidaturesCount > 0 ? (
-                <div className="space-y-4">\
+                <div className="space-y-4">
+                  {/* Liste des candidatures */}
+                </div>
+              ) : (
+                <p className="text-center text-muted-foreground py-4">
+                  Aucune candidature n&apos;est encore arrivée pour cette annonce.
+                </p>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Sidebar */}
+        <div className="hidden md:block">
+          <Card>
+            <CardHeader>
+              <CardTitle>Informations sur l'annonce</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                <div>
+                  <span className="font-semibold">ID :</span> {annonce.id}
+                </div>
+                <div>
+                  <span className="font-semibold">Type :</span> {annonce.type}
+                </div>
+                <div>
+                  <span className="font-semibold">Statut :</span> {annonce.status}
+                </div>
+                <div className="flex flex-col gap-2 mt-4 text-sm text-muted-foreground">
+                  {typeof annonce.createdAt === "string" && (
+                    <>
+                      <span className="font-semibold">Créé le :</span> {new Date(annonce.createdAt).toLocaleDateString("fr-FR")}
+                    </>
+                  )}
+                  {/* Si updatedAt existe dans l'API, décommentez la ligne suivante */}
+                  {/* {typeof annonce.updatedAt === "string" && (
+                    <>
+                      <span className="font-semibold">Modifié le :</span> {new Date(annonce.updatedAt).toLocaleDateString("fr-FR")}
+                    </>
+                  )} */}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    </div>
+  )
+}

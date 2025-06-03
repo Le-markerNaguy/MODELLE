@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input"
 import { ResourceCard } from "@/components/resource-card"
 import { HealthCenterCard } from "@/components/health-center-card"
 import { CycleCalculator } from "@/components/cycle-calculator"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 
 // Type pour les centres de santé
 interface Center {
@@ -18,84 +18,35 @@ interface Center {
   services: string[]
 }
 
-// Données des centres de santé
-const healthCenters = [
-  {
-    id: "centre-sante-feminine",
-    name: "Centre de Santé Féminine",
-    address: "123 Rue Principale, Libreville",
-    services: ["Gynécologie", "Planning familial"],
-    hours: "Lun-Ven: 8h-17h",
-    distance: "2.3 km",
-    appointmentLink: "/rendez-vous",
-    phone: "+241 01 23 45 67",
-    available: true,
-    lat: 0.4162,
-    lng: 9.4673,
-  },
-  {
-    id: "clinique-mere-enfant",
-    name: "Clinique Mère et Enfant",
-    address: "45 Avenue des Hôpitaux, Libreville",
-    services: ["Obstétrique", "Pédiatrie", "Gynécologie"],
-    hours: "Lun-Sam: 7h-19h",
-    distance: "3.1 km",
-    appointmentLink: "/rendez-vous",
-    phone: "+241 01 34 56 78",
-    available: true,
-    lat: 0.4262,
-    lng: 9.4573,
-  },
-  {
-    id: "hopital-mere-enfant-fondation",
-    name: "Hôpital Mère-Enfant Fondation Jeanne Ebori",
-    address: "Boulevard du Bord de Mer, Libreville",
-    services: ["Maternité", "Gynécologie", "Échographie"],
-    hours: "24h/24, 7j/7",
-    distance: "4.5 km",
-    appointmentLink: "/rendez-vous",
-    phone: "+241 01 45 67 89",
-    available: false,
-    lat: 0.4322,
-    lng: 9.4323,
-  },
-  {
-    id: "centre-planning-familial",
-    name: "Centre de Planning Familial",
-    address: "56 Rue de la Santé, Libreville",
-    services: ["Contraception", "Dépistage", "Conseils"],
-    hours: "Mar-Sam: 9h-16h",
-    distance: "1.8 km",
-    appointmentLink: "/rendez-vous",
-    phone: "+241 01 56 78 90",
-    available: true,
-    lat: 0.4062,
-    lng: 9.4773,
-  },
-  {
-    id: "cabinet-sante-feminine",
-    name: "Cabinet de Santé Féminine Dr. Ndong",
-    address: "78 Avenue du Commerce, Libreville",
-    services: ["Gynécologie", "Suivi de grossesse"],
-    hours: "Lun-Ven: 8h30-16h",
-    distance: "3.7 km",
-    appointmentLink: "/rendez-vous",
-    phone: "+241 01 67 89 01",
-    available: true,
-    lat: 0.4112,
-    lng: 9.4473,
-  },
-]
-
 export default function SantePage() {
   const [selectedCenter, setSelectedCenter] = useState<string>("")
   const [searchTerm, setSearchTerm] = useState<string>("")
+  const [healthCenters, setHealthCenters] = useState<any[]>([])
+  const [loading, setLoading] = useState<boolean>(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    setLoading(true)
+    fetch("/api/health-centers")
+      .then((res) => {
+        if (!res.ok) throw new Error("Impossible de charger les centres de santé")
+        return res.json()
+      })
+      .then((data) => {
+        setHealthCenters(data)
+        setLoading(false)
+      })
+      .catch((err) => {
+        setError(err.message)
+        setLoading(false)
+      })
+  }, [])
 
   // Filtrer les centres de santé en fonction du terme de recherche
   const filteredCenters = healthCenters.filter(
     (center) =>
       center.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      center.services.some((service) => service.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (center.services && center.services.some((service: string) => service.toLowerCase().includes(searchTerm.toLowerCase()))) ||
       center.address.toLowerCase().includes(searchTerm.toLowerCase()),
   )
 
@@ -229,43 +180,47 @@ export default function SantePage() {
                   </div>
                 </div>
 
-                <div className="grid gap-6 lg:grid-cols-3">
-                  <div className="lg:col-span-1 space-y-4">
-                    {filteredCenters.map((center) => (
-                      <div
-                        key={center.id}
-                        className={`transition-all ${selectedCenter === center.id ? "ring-2 ring-pink-500 rounded-lg" : ""}`}
-                        onClick={() => setSelectedCenter(center.id)}
-                      >
-                        <HealthCenterCard
-                          name={center.name}
-                          address={center.address}
-                          services={center.services}
-                          hours={center.hours}
-                          distance={center.distance}
-                          appointmentLink={`/rendez-vous?centerId=${center.id}`}
-                          phone={center.phone}
-                          available={center.available}
-                        />
-                      </div>
-                    ))}
-
-                    {filteredCenters.length === 0 && (
-                      <div className="p-4 text-center">
-                        <MapPin className="mx-auto h-12 w-12 text-muted-foreground opacity-50 mb-2" />
-                        <p className="text-muted-foreground">Aucun centre de santé ne correspond à votre recherche</p>
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="lg:col-span-2">
-                    <div className="bg-gray-100 rounded-lg h-[400px] flex items-center justify-center">
-                      <p className="text-muted-foreground">Carte des centres de santé</p>
+                <div className="lg:col-span-1 space-y-4">
+                  {loading && (
+                    <div className="p-4 text-center">Chargement des centres de santé...</div>
+                  )}
+                  {error && (
+                    <div className="p-4 text-center text-red-500">{error}</div>
+                  )}
+                  {filteredCenters.map((center) => (
+                    <div
+                      key={center.id}
+                      className={`transition-all ${selectedCenter === center.id ? "ring-2 ring-pink-500 rounded-lg" : ""}`}
+                      onClick={() => setSelectedCenter(center.id)}
+                    >
+                      <HealthCenterCard
+                        name={center.name}
+                        address={center.address}
+                        services={center.services}
+                        hours={center.hours}
+                        distance={center.distance}
+                        appointmentLink={`/rendez-vous?centerId=${center.id}`}
+                        phone={center.phone}
+                        available={center.available}
+                      />
                     </div>
-                    <p className="text-xs text-muted-foreground mt-2 text-center">
-                      Cliquez sur un marqueur pour voir plus d&apos;informations ou pour sélectionner un centre
-                    </p>
+                  ))}
+
+                  {filteredCenters.length === 0 && !loading && (
+                    <div className="p-4 text-center">
+                      <MapPin className="mx-auto h-12 w-12 text-muted-foreground opacity-50 mb-2" />
+                      <p className="text-muted-foreground">Aucun centre de santé ne correspond à votre recherche</p>
+                    </div>
+                  )}
+                </div>
+
+                <div className="lg:col-span-2">
+                  <div className="bg-gray-100 rounded-lg h-[400px] flex items-center justify-center">
+                    <p className="text-muted-foreground">Carte des centres de santé</p>
                   </div>
+                  <p className="text-xs text-muted-foreground mt-2 text-center">
+                    Cliquez sur un marqueur pour voir plus d&apos;informations ou pour sélectionner un centre
+                  </p>
                 </div>
               </CardContent>
             </Card>

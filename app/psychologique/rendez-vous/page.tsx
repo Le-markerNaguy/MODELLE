@@ -16,31 +16,107 @@ import { format } from "date-fns"
 import { fr } from "date-fns/locale"
 import { cn } from "@/lib/utils"
 import { useState } from "react"
-import Link from "next/link"
 import { useToast } from "@/hooks/use-toast"
+import { useEffect } from "react"
+import Link from "next/link"
 
 export default function RendezVousPsyPage() {
   const [date, setDate] = useState<Date>()
   const { toast } = useToast()
+  const [psychologists, setPsychologists] = useState<any[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
+  const [formData, setFormData] = useState({
+    psychologistId: "",
+    date: "",
+    time: "",
+    type: "presentiel",
+    nom: "",
+    prenom: "",
+    email: "",
+    telephone: "",
+    motif: "",
+    details: "",
+    notifications: true,
+  })
 
-    // Simuler un délai d'envoi
-    toast({
-      title: "Rendez-vous confirmé !",
-      description: `Votre rendez-vous avec ${document.querySelector('input[name="psychologue"]:checked')?.id === "emilie-ntoutoume" ? "Dr. Émilie Ntoutoume" : document.querySelector('input[name="psychologue"]:checked')?.id === "marc-ondo" ? "Dr. Marc Ondo" : "Dr. Claire Mba"} a été programmé. Un email de confirmation vous a été envoyé.`,
-      duration: 5000,
-    })
-
-    // Simuler l'ajout d'une notification
-    setTimeout(() => {
-      toast({
-        title: "Notification ajoutée",
-        description: "Une notification de rappel a été ajoutée à votre calendrier.",
-        duration: 3000,
+  useEffect(() => {
+    setIsLoading(true)
+    fetch("/api/professionals?type=psychologue")
+      .then((res) => {
+        if (!res.ok) throw new Error("Impossible de charger la liste des psychologues")
+        return res.json()
       })
-    }, 2000)
+      .then((data) => {
+        setPsychologists(Array.isArray(data) ? data : [])
+        setIsLoading(false)
+      })
+      .catch((err) => {
+        setError(err.message)
+        setIsLoading(false)
+      })
+  }, [])
+
+  const handleFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value, type } = e.target
+    const checked = (e.target as HTMLInputElement).checked
+    setFormData((prev) => ({
+      ...prev,
+      [name]: type === "checkbox" ? checked : value,
+    }))
+  }
+
+  const handleSelectChange = (name: string, value: string) => {
+    setFormData((prev) => ({ ...prev, [name]: value }))
+  }
+
+  const handleRadioChange = (value: string) => {
+    setFormData((prev) => ({ ...prev, psychologistId: value }))
+  }
+
+  const handleDateChange = (selectedDate: Date | undefined) => {
+    setDate(selectedDate)
+    setFormData((prev) => ({ ...prev, date: selectedDate ? selectedDate.toISOString() : "" }))
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    // Validation simple
+    if (!formData.psychologistId || !formData.date || !formData.time || !formData.nom || !formData.prenom || !formData.email) {
+      toast({
+        title: "Erreur",
+        description: "Veuillez remplir tous les champs obligatoires.",
+        variant: "destructive",
+      })
+      return
+    }
+    try {
+      const res = await fetch("/api/appointments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData),
+      })
+      const data = await res.json()
+      if (res.ok) {
+        toast({
+          title: "Rendez-vous confirmé !",
+          description: data.message || "Votre rendez-vous a été enregistré. Un email de confirmation vous a été envoyé.",
+        })
+      } else {
+        toast({
+          title: "Erreur",
+          description: data.error || "Une erreur est survenue lors de la prise de rendez-vous.",
+          variant: "destructive",
+        })
+      }
+    } catch (error) {
+      toast({
+        title: "Erreur",
+        description: "Impossible de soumettre le rendez-vous.",
+        variant: "destructive",
+      })
+    }
   }
 
   return (
@@ -62,32 +138,24 @@ export default function RendezVousPsyPage() {
             <CardDescription>Choisissez un psychologue spécialisé dans votre domaine</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <RadioGroup defaultValue="emilie-ntoutoume">
-              <div className="flex items-center space-x-2 border rounded-lg p-3 cursor-pointer hover:bg-accent">
-                <RadioGroupItem value="emilie-ntoutoume" id="emilie-ntoutoume" name="psychologue" />
-                <Label htmlFor="emilie-ntoutoume" className="flex-1 cursor-pointer">
-                  <div className="font-medium">Dr. Émilie Ntoutoume</div>
-                  <div className="text-sm text-muted-foreground">Traumatismes et SSPT</div>
-                  <div className="text-xs text-muted-foreground">Lun, Mer, Ven: 9h-17h</div>
-                </Label>
-              </div>
-              <div className="flex items-center space-x-2 border rounded-lg p-3 cursor-pointer hover:bg-accent">
-                <RadioGroupItem value="marc-ondo" id="marc-ondo" name="psychologue" />
-                <Label htmlFor="marc-ondo" className="flex-1 cursor-pointer">
-                  <div className="font-medium">Dr. Marc Ondo</div>
-                  <div className="text-sm text-muted-foreground">Thérapie familiale</div>
-                  <div className="text-xs text-muted-foreground">Mar, Jeu: 8h-16h</div>
-                </Label>
-              </div>
-              <div className="flex items-center space-x-2 border rounded-lg p-3 cursor-pointer hover:bg-accent">
-                <RadioGroupItem value="claire-mba" id="claire-mba" name="psychologue" />
-                <Label htmlFor="claire-mba" className="flex-1 cursor-pointer">
-                  <div className="font-medium">Dr. Claire Mba</div>
-                  <div className="text-sm text-muted-foreground">Anxiété et dépression</div>
-                  <div className="text-xs text-muted-foreground">Lun, Mar, Jeu: 10h-18h</div>
-                </Label>
-              </div>
-            </RadioGroup>
+            {isLoading ? (
+              <div className="text-center text-muted-foreground">Chargement des psychologues...</div>
+            ) : error ? (
+              <div className="text-center text-red-500">{error}</div>
+            ) : (
+              <RadioGroup value={formData.psychologistId} onValueChange={handleRadioChange}>
+                {psychologists.map((psychologist: any) => (
+                  <div key={psychologist.id} className="flex items-center space-x-2 border rounded-lg p-3 cursor-pointer hover:bg-accent">
+                    <RadioGroupItem value={psychologist.id} id={psychologist.id} />
+                    <Label htmlFor={psychologist.id} className="flex-1 cursor-pointer">
+                      <div className="font-medium">{psychologist.name}</div>
+                      <div className="text-sm text-muted-foreground">{psychologist.specialty}</div>
+                      <div className="text-xs text-muted-foreground">{psychologist.availability}</div>
+                    </Label>
+                  </div>
+                ))}
+              </RadioGroup>
+            )}
             <div className="pt-2">
               <Link href="/psychologique" className="text-sm text-pink-600 hover:underline">
                 Voir tous les psychologues disponibles
@@ -115,14 +183,14 @@ export default function RendezVousPsyPage() {
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0">
-                  <Calendar mode="single" selected={date} onSelect={setDate} initialFocus />
+                  <Calendar mode="single" selected={date} onSelect={handleDateChange} initialFocus />
                 </PopoverContent>
               </Popover>
             </div>
 
             <div className="space-y-2">
               <Label>Heure du rendez-vous</Label>
-              <Select>
+              <Select value={formData.time} onValueChange={(v) => handleSelectChange("time", v)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Sélectionnez une heure" />
                 </SelectTrigger>
@@ -138,7 +206,7 @@ export default function RendezVousPsyPage() {
 
             <div className="space-y-2">
               <Label>Type de consultation</Label>
-              <Select defaultValue="presentiel">
+              <Select value={formData.type} onValueChange={(v) => handleSelectChange("type", v)}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -162,28 +230,28 @@ export default function RendezVousPsyPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="nom">Nom</Label>
-              <Input id="nom" placeholder="Votre nom" />
+              <Input name="nom" value={formData.nom} onChange={handleFormChange} id="nom" placeholder="Votre nom" />
             </div>
             <div className="space-y-2">
               <Label htmlFor="prenom">Prénom</Label>
-              <Input id="prenom" placeholder="Votre prénom" />
+              <Input name="prenom" value={formData.prenom} onChange={handleFormChange} id="prenom" placeholder="Votre prénom" />
             </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
-              <Input id="email" type="email" placeholder="votre.email@exemple.com" />
+              <Input name="email" value={formData.email} onChange={handleFormChange} id="email" type="email" placeholder="votre.email@exemple.com" />
             </div>
             <div className="space-y-2">
               <Label htmlFor="telephone">Téléphone</Label>
-              <Input id="telephone" placeholder="Votre numéro de téléphone" />
+              <Input name="telephone" value={formData.telephone} onChange={handleFormChange} id="telephone" placeholder="Votre numéro de téléphone" />
             </div>
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="motif">Motif de la consultation</Label>
-            <Select>
+            <Select value={formData.motif} onValueChange={(v) => handleSelectChange("motif", v)}>
               <SelectTrigger>
                 <SelectValue placeholder="Sélectionnez un motif" />
               </SelectTrigger>
@@ -192,7 +260,7 @@ export default function RendezVousPsyPage() {
                 <SelectItem value="depression">Dépression</SelectItem>
                 <SelectItem value="trauma">Traumatisme</SelectItem>
                 <SelectItem value="couple">Problèmes de couple</SelectItem>
-                <SelectItem value="famille">Problèmes familiaux</SelectItem>
+                <SelectItem value="famille">Problèmes familials</SelectItem>
                 <SelectItem value="autre">Autre</SelectItem>
               </SelectContent>
             </Select>
@@ -201,6 +269,9 @@ export default function RendezVousPsyPage() {
           <div className="space-y-2">
             <Label htmlFor="details">Détails supplémentaires (facultatif)</Label>
             <Textarea
+              name="details"
+              value={formData.details}
+              onChange={handleFormChange}
               id="details"
               placeholder="Veuillez fournir des détails supplémentaires sur votre situation pour aider le psychologue à se préparer"
               rows={4}
@@ -208,7 +279,15 @@ export default function RendezVousPsyPage() {
           </div>
 
           <div className="flex items-center space-x-2 pt-2">
-            <input type="checkbox" id="notifications" className="rounded border-gray-300" defaultChecked />
+            <input
+              type="checkbox"
+              name="notifications"
+              checked={formData.notifications}
+              onChange={handleFormChange}
+              id="notifications"
+              className="rounded border-gray-300"
+              defaultChecked
+            />
             <label htmlFor="notifications" className="text-sm">
               Recevoir des rappels de rendez-vous par email et notification
             </label>

@@ -5,43 +5,54 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Heart, MapPin, Clock, Star, Mail, Phone, FileText, BookOpen } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
+import { useEffect, useState } from "react"
 
 export default function PsychologueProfilePage({ params }: { params: { slug: string } }) {
-  // Dans une application réelle, vous récupéreriez les données du psychologue à partir d'une API ou d'une base de données
-  // Ici, nous utilisons des données statiques pour la démonstration
-  const psychologist = {
-    name: "Dr. Émilie Ntoutoume",
-    specialty: "Traumatismes et SSPT",
-    experience: "12 ans d'expérience",
-    availability: "Lun, Mer, Ven: 9h-17h",
-    bio: "Dr. Émilie Ntoutoume est spécialisée dans le traitement des traumatismes et du syndrome de stress post-traumatique (SSPT). Avec 12 ans d'expérience, elle a aidé de nombreuses personnes à surmonter des expériences traumatiques et à retrouver un équilibre émotionnel. Elle utilise une approche intégrative combinant thérapie cognitivo-comportementale, EMDR et techniques de pleine conscience.",
-    education: [
-      "Doctorat en Psychologie Clinique, Université de Libreville, 2011",
-      "Master en Psychologie, Université Paris-Descartes, 2008",
-      "Formation en EMDR, Institut Français d'EMDR, 2013",
-    ],
-    expertise: [
-      "Syndrome de stress post-traumatique (SSPT)",
-      "Traumatismes liés aux violences",
-      "Anxiété et troubles paniques",
-      "Dépression post-traumatique",
-      "Thérapie EMDR",
-    ],
-    approaches: [
-      "Thérapie cognitivo-comportementale (TCC)",
-      "EMDR (Eye Movement Desensitization and Reprocessing)",
-      "Pleine conscience et techniques de relaxation",
-      "Thérapie narrative",
-    ],
-    languages: ["Français", "Anglais", "Fang"],
-    contact: {
-      email: "emilie.ntoutoume@modelles.ga",
-      phone: "+241 XX XX XX XX",
-      address: "Centre Mod'Elles, 123 Rue Principale, Libreville",
-    },
-    ratings: 4.9,
-    reviewCount: 38,
-    imageUrl: "/placeholder.svg?height=400&width=400",
+  const [psychologist, setPsychologist] = useState<any>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    setIsLoading(true)
+    fetch(`/api/professionals/${params.slug}`)
+      .then((res) => {
+        if (!res.ok) throw new Error("Impossible de charger le profil du psychologue")
+        return res.json()
+      })
+      .then((data) => {
+        setPsychologist(data)
+        setIsLoading(false)
+      })
+      .catch((err) => {
+        setError(err.message)
+        setIsLoading(false)
+      })
+  }, [params.slug])
+
+  if (isLoading) {
+    return (
+      <div className="container py-10 max-w-6xl">
+        <Card className="border-2 border-pink-100 dark:border-pink-900/30">
+          <CardHeader className="text-center">
+            <CardTitle className="text-2xl">Chargement...</CardTitle>
+            <CardDescription>Chargement du profil du psychologue...</CardDescription>
+          </CardHeader>
+        </Card>
+      </div>
+    )
+  }
+
+  if (error || !psychologist) {
+    return (
+      <div className="container py-10 max-w-6xl">
+        <Card className="border-2 border-red-100 dark:border-red-900/30">
+          <CardHeader className="text-center">
+            <CardTitle className="text-2xl text-red-600">Erreur</CardTitle>
+            <CardDescription>{error || "Impossible de charger le profil du psychologue."}</CardDescription>
+          </CardHeader>
+        </Card>
+      </div>
+    )
   }
 
   return (
@@ -150,7 +161,7 @@ export default function PsychologueProfilePage({ params }: { params: { slug: str
                 </CardHeader>
                 <CardContent>
                   <ul className="space-y-2">
-                    {psychologist.education.map((edu, index) => (
+                    {Array.isArray(psychologist.education) && psychologist.education.map((edu: string, index: number) => (
                       <li key={index} className="flex items-start">
                         <FileText className="h-5 w-5 mr-2 text-muted-foreground" />
                         <span>{edu}</span>
@@ -166,7 +177,7 @@ export default function PsychologueProfilePage({ params }: { params: { slug: str
                 </CardHeader>
                 <CardContent>
                   <div className="flex flex-wrap gap-2">
-                    {psychologist.languages.map((lang) => (
+                    {Array.isArray(psychologist.languages) && psychologist.languages.map((lang: string) => (
                       <Badge key={lang} variant="secondary">
                         {lang}
                       </Badge>
@@ -184,7 +195,7 @@ export default function PsychologueProfilePage({ params }: { params: { slug: str
                 </CardHeader>
                 <CardContent>
                   <ul className="space-y-3">
-                    {psychologist.expertise.map((exp, index) => (
+                    {Array.isArray(psychologist.expertise) && psychologist.expertise.map((exp: string, index: number) => (
                       <li key={index} className="flex items-start">
                         <Heart className="h-5 w-5 mr-2 text-pink-600" />
                         <div>
@@ -203,7 +214,7 @@ export default function PsychologueProfilePage({ params }: { params: { slug: str
                 </CardHeader>
                 <CardContent>
                   <ul className="space-y-3">
-                    {psychologist.approaches.map((approach, index) => (
+                    {Array.isArray(psychologist.approaches) && psychologist.approaches.map((approach: string, index: number) => (
                       <li key={index} className="flex items-start">
                         <BookOpen className="h-5 w-5 mr-2 text-pink-600" />
                         <div>

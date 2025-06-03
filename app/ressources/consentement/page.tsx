@@ -1,46 +1,37 @@
-import type { Metadata } from "next"
+"use client"
 
-export const metadata: Metadata = {
-  title: "Consentement | Modelles",
-  description: "Ressources sur le consentement, la communication et le respect des limites",
-}
+import { useEffect, useState } from "react"
 
 export default function ConsentementPage() {
-  const documents = [
-    {
-      title: "Guide du consentement",
-      description: "Comprendre les principes fondamentaux du consentement dans toutes les relations",
-      filename: "guide-consentement.pdf",
-      path: "/documents/guide-consentement.pdf",
-    },
-    {
-      title: "Communication et consentement",
-      description: "Techniques pour communiquer clairement ses limites et respecter celles des autres",
-      filename: "communication-consentement.pdf",
-      path: "/documents/communication-consentement.pdf",
-    },
-  ];
+  const [resource, setResource] = useState<any>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
-  const videos = [
-    {
-      title: "Les bases du consentement",
-      description: "Une introduction au concept de consentement et son importance",
-      thumbnail: "/images/consentement-thumbnail.jpg",
-      path: "/videos/consentement.mp4",
-    },
-    {
-      title: "Consentement dans les relations",
-      description: "Comment pratiquer le consentement dans différents types de relations",
-      thumbnail: "/images/consentement-thumbnail.jpg",
-      path: "/videos/consentement.mp4",
-    },
-    {
-      title: "Enseigner le consentement",
-      description: "Comment parler du consentement aux enfants et aux adolescents",
-      thumbnail: "/images/consentement-thumbnail.jpg",
-      path: "/videos/consentement.mp4",
-    },
-  ];
+  useEffect(() => {
+    setIsLoading(true)
+    fetch("/api/resources/consentement")
+      .then((res) => {
+        if (!res.ok) throw new Error("Impossible de charger la ressource")
+        return res.json()
+      })
+      .then((data) => {
+        setResource(data)
+        setIsLoading(false)
+      })
+      .catch((err) => {
+        setError(err.message)
+        setIsLoading(false)
+      })
+  }, [])
+
+  if (isLoading) {
+    return <main className="container mx-auto px-4 py-8 text-center">Chargement...</main>
+  }
+  if (error || !resource) {
+    return <main className="container mx-auto px-4 py-8 text-center text-red-500">{error || "Ressource introuvable."}</main>
+  }
+
+  const { title, description, documents, videos } = resource
 
   return (
     <main className="container mx-auto px-4 py-8">
@@ -53,9 +44,9 @@ export default function ConsentementPage() {
           </a>
         </div>
 
-        <h1 className="text-3xl font-bold text-rose-600 dark:text-rose-400 mb-2">Consentement</h1>
+        <h1 className="text-3xl font-bold text-rose-600 dark:text-rose-400 mb-2">{title}</h1>
         <p className="text-lg text-muted-foreground mb-8">
-          Ressources pour comprendre et pratiquer le consentement dans toutes les relations.
+          {description}
         </p>
 
         <div className="prose dark:prose-invert max-w-none mb-10">
@@ -78,7 +69,7 @@ export default function ConsentementPage() {
         <section className="mb-10">
           <h2 className="text-2xl font-semibold mb-4">Guides et documents à télécharger</h2>
           <div className="grid md:grid-cols-2 gap-6">
-            {documents.map((doc) => (
+            {documents.map((doc: any) => (
               <a
                 key={doc.filename}
                 href={doc.path}
@@ -97,7 +88,7 @@ export default function ConsentementPage() {
         <section>
           <h2 className="text-2xl font-semibold mb-4">Vidéos pédagogiques</h2>
           <div className="grid md:grid-cols-3 gap-6">
-            {videos.map((video, idx) => (
+            {videos.map((video: any, idx: number) => (
               <div key={idx} className="border rounded-lg overflow-hidden bg-white dark:bg-gray-900 shadow-sm">
                 <video
                   controls

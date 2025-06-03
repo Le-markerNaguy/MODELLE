@@ -31,15 +31,24 @@ import {
 } from "@/components/ui/dropdown-menu"
 import Link from "next/link"
 import { useAuth } from "@/contexts/AuthContext"
-import {
-  type Annonce,
-  type AnnonceStatus,
-  type AnnonceType,
-  getAnnoncesByOrganisation,
-  deleteAnnonce,
-} from "@/lib/store"
 import { useToast } from "@/hooks/use-toast"
 import { useRouter } from "next/navigation"
+
+// Type minimal pour l'annonce API (adapter selon le schéma réel)
+type AnnonceAPI = {
+  id: string
+  title: string
+  description: string
+  type: string
+  status: string
+  imageUrl?: string
+  location?: string
+  startDate?: string
+  endDate?: string
+  organization?: { id: string; name: string; logoUrl?: string }
+  vues?: number
+  details?: { Places?: number } // Ajouté pour corriger l'accès à annonce.details.Places
+}
 
 export default function AnnoncesPage() {
   const { user } = useAuth()
@@ -48,17 +57,33 @@ export default function AnnoncesPage() {
   const [activeTab, setActiveTab] = useState<string>("all")
   const [searchTerm, setSearchTerm] = useState<string>("")
   const [typeFilter, setTypeFilter] = useState<string>("all")
-  const [annonces, setAnnonces] = useState<Annonce[]>([])
+  const [annonces, setAnnonces] = useState<AnnonceAPI[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
     if (user) {
-      // Récupérer les annonces de l'organisation
-      const organisationAnnonces = getAnnoncesByOrganisation(user.id)
-      setAnnonces(organisationAnnonces)
-      setIsLoading(false)
+      setIsLoading(true)
+      // Récupérer les annonces de l'organisation via l'API
+      fetch(`/api/announcements?organizationId=${user.id}`)
+        .then((res) => {
+          if (!res.ok) throw new Error("Impossible de charger les annonces")
+          return res.json()
+        })
+        .then((data) => {
+          setAnnonces(Array.isArray(data) ? data : [])
+          setIsLoading(false)
+        })
+        .catch((err) => {
+          setAnnonces([])
+          setIsLoading(false)
+          toast({
+            title: "Erreur",
+            description: err.message,
+            variant: "destructive",
+          })
+        })
     }
-  }, [user])
+  }, [user, toast])
 
   // Filtrer les annonces en fonction des critères
   const filteredAnnonces = annonces.filter((annonce) => {
@@ -72,7 +97,7 @@ export default function AnnoncesPage() {
 
     // Filtrer par terme de recherche
     const searchMatch =
-      annonce.titre.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      annonce.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       annonce.description.toLowerCase().includes(searchTerm.toLowerCase())
 
     // Filtrer par type
@@ -82,7 +107,7 @@ export default function AnnoncesPage() {
   })
 
   // Obtenir l'icône en fonction du type d'annonce
-  const getAnnonceIcon = (type: AnnonceType) => {
+  const getAnnonceIcon = (type: AnnonceAPI["type"]) => {
     switch (type) {
       case "formation":
         return <GraduationCap className="h-5 w-5 text-blue-500" />
@@ -96,7 +121,7 @@ export default function AnnoncesPage() {
   }
 
   // Obtenir le badge en fonction du statut de l'annonce
-  const getStatusBadge = (status: AnnonceStatus) => {
+  const getStatusBadge = (status: AnnonceAPI["status"]) => {
     switch (status) {
       case "active":
         return <Badge className="bg-green-100 text-green-800 hover:bg-green-200">Active</Badge>
@@ -111,23 +136,26 @@ export default function AnnoncesPage() {
     }
   }
 
-  const handleDeleteAnnonce = (id: string) => {
-    if (confirm("Êtes-vous sûr de vouloir supprimer cette annonce ?")) {
-      const success = deleteAnnonce(id)
-      if (success) {
-        // Mettre à jour la liste des annonces
-        setAnnonces(annonces.filter((annonce) => annonce.id !== id))
+  // Suppression réelle via l'API
+  const handleDelete = async (id: string) => {
+    if (!confirm("Êtes-vous sûr de vouloir supprimer cette annonce ?")) return
+    try {
+      const res = await fetch(`/api/announcements/${id}`, { method: "DELETE" })
+      if (res.ok) {
+        setAnnonces((prev) => prev.filter((a) => a.id !== id))
         toast({
           title: "Annonce supprimée",
           description: "L'annonce a été supprimée avec succès",
         })
       } else {
-        toast({
-          title: "Erreur",
-          description: "Une erreur est survenue lors de la suppression de l'annonce",
-          variant: "destructive",
-        })
+        throw new Error()
       }
+    } catch {
+      toast({
+        title: "Erreur",
+        description: "Une erreur est survenue lors de la suppression de l'annonce",
+        variant: "destructive",
+      })
     }
   }
 
@@ -210,21 +238,21 @@ export default function AnnoncesPage() {
                         <div className="p-2 bg-muted rounded-md">{getAnnonceIcon(annonce.type)}</div>
                         <div>
                           <div className="flex items-center gap-2">
-                            <p className="font-medium">{annonce.titre}</p>
+                            <p className="font-medium">{annonce.title}</p>
                             {getStatusBadge(annonce.status)}
                           </div>
                           <p className="text-sm text-muted-foreground line-clamp-1">{annonce.description}</p>
                           <div className="flex items-center mt-1 text-xs text-muted-foreground">
                             <Calendar className="mr-1 h-3 w-3" />
                             <span>
-                              {new Date(annonce.date).toLocaleDateString()}
-                              {annonce.dateFin && ` - ${new Date(annonce.dateFin).toLocaleDateString()}`}
+                              {typeof annonce.startDate === "string" ? new Date(annonce.startDate).toLocaleDateString() : "-"}
+                              {annonce.endDate && ` - ${new Date(annonce.endDate).toLocaleDateString()}`}
                             </span>
                             <span className="mx-2">•</span>
                             <Users className="mr-1 h-3 w-3" />
                             <span>
                               {annonce.type === "formation" || annonce.type === "evenement"
-                                ? `${annonce.details.Places || 0} places`
+                                ? `${annonce.details?.Places ?? 0} places`
                                 : "1 poste"}
                             </span>
                             <span className="mx-2">•</span>
@@ -268,7 +296,7 @@ export default function AnnoncesPage() {
                               </Link>
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem className="text-red-600" onClick={() => handleDeleteAnnonce(annonce.id)}>
+                            <DropdownMenuItem className="text-red-600" onClick={() => handleDelete(annonce.id)}>
                               <Trash className="mr-2 h-4 w-4" />
                               Supprimer
                             </DropdownMenuItem>

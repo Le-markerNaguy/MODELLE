@@ -5,7 +5,6 @@ import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Heart, Calendar, Briefcase, MessageSquare, AlertTriangle } from "lucide-react"
-import { Chatbot } from "@/components/chatbot"
 import { useState } from "react"
 
 export default function Home() {
@@ -90,18 +89,6 @@ export default function Home() {
               description="Te connecter à des offres d'emploi et des formations pour développer ton avenir professionnel."
               icon={<Briefcase className="h-10 w-10 text-pink-600" />}
             />
-          </div>
-        </div>
-      </section>
-
-      {/* Chatbot Alert */}
-      <section className="w-full py-8 bg-pink-100">
-        <div className="container px-4 md:px-6">
-          <div className="flex items-center justify-center gap-3 text-pink-800">
-            <MessageSquare className="h-6 w-6" />
-            <p className="text-base font-medium">
-              Un chatbot est disponible pour répondre à vos questions. Il est présent dans nos différent services.
-            </p>
           </div>
         </div>
       </section>
@@ -270,9 +257,6 @@ export default function Home() {
           </div>
         </div>
       </section>
-      {/* Chatbot */}
-      <Chatbot />
-
       {/* Retirer le bouton d'initialisation de la base de données (seed) */}
     </div>
   )

@@ -24,11 +24,7 @@ export default function AdminLayout({
     <>
       <nav>
         <ul>
-          <li>
-            <Link href="/admin/test-chatbot" className="block px-4 py-2 hover:bg-gray-100">
-              Test du Chatbot
-            </Link>
-          </li>
+          {/* Suppression du lien vers /admin/test-chatbot et du texte 'Test du Chatbot' */}
         </ul>
       </nav>
       {children}

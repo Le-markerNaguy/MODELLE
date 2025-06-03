@@ -15,65 +15,33 @@ import {
 } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
+import { useEffect, useState } from "react"
 
 export default function AnnoncePage({ params }: { params: { slug: string } }) {
-  // Dans une application réelle, vous récupéreriez les données de l'annonce à partir d'une API ou d'une base de données
-  // Ici, nous utilisons des données statiques pour la démonstration
-  const annonce = {
-    id: "1",
-    titre: "Formation en Entrepreneuriat Féminin",
-    type: "formation",
-    description:
-      "Une formation complète pour développer vos compétences entrepreneuriales et lancer votre entreprise avec succès. Cette formation intensive de 6 jours vous permettra d'acquérir les connaissances et compétences essentielles pour créer et gérer votre entreprise.",
-    contenu: `
-      <h3>Objectifs de la formation</h3>
-      <ul>
-        <li>Comprendre les fondamentaux de l'entrepreneuriat</li>
-        <li>Développer un business plan solide</li>
-        <li>Maîtriser les bases de la gestion financière</li>
-        <li>Élaborer une stratégie marketing efficace</li>
-        <li>Développer son réseau professionnel</li>
-      </ul>
-      
-      <h3>Programme</h3>
-      <p><strong>Jour 1:</strong> Introduction à l'entrepreneuriat et identification des opportunités</p>
-      <p><strong>Jour 2:</strong> Élaboration du business plan et étude de marché</p>
-      <p><strong>Jour 3:</strong> Gestion financière et recherche de financement</p>
-      <p><strong>Jour 4:</strong> Marketing et stratégie commerciale</p>
-      <p><strong>Jour 5:</strong> Aspects juridiques et administratifs</p>
-      <p><strong>Jour 6:</strong> Networking et présentation des projets</p>
-      
-      <h3>Public cible</h3>
-      <p>Cette formation s'adresse aux femmes souhaitant créer leur entreprise ou ayant récemment lancé leur activité.</p>
-      
-      <h3>Prérequis</h3>
-      <p>Aucun prérequis spécifique n'est nécessaire. La formation est ouverte à toutes les femmes motivées par l'entrepreneuriat.</p>
-    `,
-    organisation: "Mod'Elles",
-    lieu: "Centre Mod'Elles, Libreville",
-    date: "15-20 mai 2024",
-    horaires: "9h00 - 17h00",
-    deadline: "30 avril 2024",
-    places: "15 places disponibles",
-    prix: "Formation gratuite (financée par nos partenaires)",
-    contact: "formations@modelles.ga | +241 XX XX XX XX",
-    image: "/placeholder.svg?height=400&width=800",
-    categories: ["entrepreneuriat", "business", "finance"],
-    formateurs: [
-      {
-        nom: "Marie Ndong",
-        titre: "Entrepreneure et Consultante",
-        bio: "15 ans d'expérience dans l'accompagnement d'entreprises",
-        image: "/placeholder.svg?height=100&width=100",
-      },
-      {
-        nom: "Sophie Obame",
-        titre: "Experte en Finance",
-        bio: "Spécialiste du financement des PME",
-        image: "/placeholder.svg?height=100&width=100",
-      },
-    ],
-  }
+  const [annonce, setAnnonce] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    setLoading(true)
+    fetch(`/api/announcements/${params.slug}`)
+      .then((res) => {
+        if (!res.ok) throw new Error("Erreur lors du chargement de l'annonce")
+        return res.json()
+      })
+      .then((data) => {
+        setAnnonce(data)
+        setLoading(false)
+      })
+      .catch((err) => {
+        setError(err.message)
+        setLoading(false)
+      })
+  }, [params.slug])
+
+  if (loading) return <div className="p-10 text-center">Chargement...</div>
+  if (error) return <div className="p-10 text-center text-red-500">{error}</div>
+  if (!annonce) return null
 
   // Obtenir l'icône en fonction du type d'annonce
   const getAnnonceIcon = (type: string) => {
@@ -143,7 +111,7 @@ export default function AnnoncePage({ params }: { params: { slug: string } }) {
                 <div className="mt-8">
                   <h3 className="text-lg font-semibold mb-4">Formateurs</h3>
                   <div className="grid gap-4 md:grid-cols-2">
-                    {annonce.formateurs.map((formateur, index) => (
+                    {annonce.formateurs.map((formateur: any, index: number) => (
                       <div key={index} className="flex items-center gap-4 p-4 border rounded-lg">
                         <div className="relative h-16 w-16 rounded-full overflow-hidden">
                           <Image

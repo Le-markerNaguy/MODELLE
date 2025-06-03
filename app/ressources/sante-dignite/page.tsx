@@ -1,5 +1,6 @@
 import type { Metadata } from "next"
 import ResourceMedia from "@/components/resource-media"
+import { useEffect, useState } from "react"
 
 export const metadata: Metadata = {
   title: "Santé et Dignité | Modelles",
@@ -7,47 +8,26 @@ export const metadata: Metadata = {
 }
 
 export default function SanteDigniteePage() {
-  const documents = [
-    {
-      title: "Guide complet du cycle menstruel",
-      description: "Comprendre les différentes phases du cycle menstruel et leur impact",
-      filename: "guide-cycle-menstruel.pdf",
-      path: "/documents/guide-cycle-menstruel.pdf",
-    },
-    {
-      title: "Comparatif des produits d'hygiène menstruelle",
-      description: "Avantages et inconvénients des différentes options disponibles",
-      filename: "produits-hygiene-menstruelle.pdf",
-      path: "/documents/produits-hygiene-menstruelle.pdf",
-    },
-    {
-      title: "Comprendre et combattre la précarité menstruelle",
-      description: "Ressources et solutions pour lutter contre la précarité menstruelle",
-      filename: "precarite-menstruelle.pdf",
-      path: "/documents/precarite-menstruelle.pdf",
-    },
-  ]
+  const [resource, setResource] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
-  const videos = [
-    {
-      title: "Comprendre son cycle menstruel",
-      description: "Les bases pour mieux comprendre et vivre avec son cycle",
-      thumbnail: "/images/sante-menstruelle-thumbnail.jpg",
-      path: "/videos/sante-menstruelle.mp4",
-    },
-    {
-      title: "Options d'hygiène menstruelle durables",
-      description: "Présentation des alternatives écologiques aux produits jetables",
-      thumbnail: "/images/sante-menstruelle-thumbnail.jpg",
-      path: "/videos/sante-menstruelle.mp4",
-    },
-    {
-      title: "Santé menstruelle et bien-être",
-      description: "Comment prendre soin de soi pendant les menstruations",
-      thumbnail: "/images/sante-menstruelle-thumbnail.jpg",
-      path: "/videos/sante-menstruelle.mp4",
-    },
-  ]
+  useEffect(() => {
+    setLoading(true)
+    fetch("/api/resources/sante-dignite")
+      .then((res) => {
+        if (!res.ok) throw new Error("Impossible de charger la ressource")
+        return res.json()
+      })
+      .then((data) => {
+        setResource(data)
+        setLoading(false)
+      })
+      .catch((err) => {
+        setError(err.message)
+        setLoading(false)
+      })
+  }, [])
 
   return (
     <main className="container mx-auto px-4 py-8">
@@ -107,29 +87,11 @@ export default function SanteDigniteePage() {
 
         <div className="mb-10">
           <h2 className="text-2xl font-semibold mb-6">Ressources médias</h2>
-          <ResourceMedia documents={documents} videos={videos} />
-          <div className="flex flex-wrap gap-4 mt-6">
-            {documents.map((doc, idx) => (
-              <a
-                key={doc.filename}
-                href="/sante"
-                className="inline-flex items-center px-3 py-1.5 bg-pink-600 hover:bg-pink-700 text-white rounded shadow text-sm transition"
-                style={{ marginRight: 8, marginBottom: 8 }}
-              >
-                ← Retour à la page Santé
-              </a>
-            ))}
-            {videos.map((video, idx) => (
-              <a
-                key={video.title + idx}
-                href="/sante"
-                className="inline-flex items-center px-3 py-1.5 bg-pink-600 hover:bg-pink-700 text-white rounded shadow text-sm transition"
-                style={{ marginRight: 8, marginBottom: 8 }}
-              >
-                ← Retour à la page Santé
-              </a>
-            ))}
-          </div>
+          {loading && <div>Chargement...</div>}
+          {error && <div className="text-red-600">{error}</div>}
+          {resource && (
+            <ResourceMedia documents={resource.documents} videos={resource.videos} />
+          )}
         </div>
 
         <div className="bg-rose-50 dark:bg-rose-900/20 p-6 rounded-lg">

@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -39,41 +39,28 @@ export default function PostulerPage() {
     notifier: true,
   })
 
-  // Simuler le chargement des données de l'API
-  useState(() => {
+  // Chargement des données de l'API
+  useEffect(() => {
     setIsLoading(true)
-
-    // Dans une implémentation réelle, nous utiliserions l'API
-    // api.get(`/annonces/${annonceId}`)
-    //   .then(response => setAnnonce(response.data))
-    //   .catch(err => setError("Impossible de charger les détails de l'offre d'emploi"))
-    //   .finally(() => setIsLoading(false))
-
-    // Simulation de données pour la démonstration
-    setTimeout(() => {
-      setAnnonce({
-        id: annonceId || "1",
-        titre: "Assistante Administrative",
-        type: "emploi",
-        description:
-          "Nous recherchons une assistante administrative pour notre bureau à Libreville. La candidate idéale sera organisée, rigoureuse et possèdera d'excellentes compétences en communication.",
-        entreprise: "Entreprise Partenaire",
-        lieu: "Libreville, Gabon",
-        date_publication: "15 mars 2024",
-        date_limite: "15 avril 2024",
-        type_contrat: "CDI",
-        salaire: "Selon profil et expérience",
-        competences: [
-          "Maîtrise des outils bureautiques",
-          "Excellente organisation",
-          "Capacité à gérer plusieurs tâches simultanément",
-          "Bonnes compétences en communication écrite et orale",
-          "Français courant, anglais apprécié",
-        ],
-        image: "/placeholder.svg?height=300&width=600",
-      })
+    setError(null)
+    if (!annonceId) {
+      setError("Aucune annonce sélectionnée.")
       setIsLoading(false)
-    }, 1000)
+      return
+    }
+    fetch(`/api/announcements/${annonceId}`)
+      .then((res) => {
+        if (!res.ok) throw new Error("Impossible de charger les détails de l'offre d'emploi")
+        return res.json()
+      })
+      .then((data) => {
+        setAnnonce(data)
+        setIsLoading(false)
+      })
+      .catch((err) => {
+        setError(err.message)
+        setIsLoading(false)
+      })
   }, [annonceId])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -316,6 +303,18 @@ export default function PostulerPage() {
                   <p className="text-xs text-muted-foreground mt-1">
                     Formats acceptés: PDF, Word, JPG, PNG. Taille max: 5 MB
                   </p>
+                </div>
+
+                <div className="flex items-start space-x-2 pt-2">
+                  <Checkbox
+                    id="acceptTerms"
+                    checked={formData.acceptTerms}
+                    onCheckedChange={(checked) => handleCheckboxChange("acceptTerms", !!checked)}
+                  />
+                  <Label htmlFor="acceptTerms" className="font-normal text-sm leading-tight">
+                    J&apos;accepte que mes données personnelles soient traitées conformément à la politique de
+                    confidentialité pour le traitement de ma candidature.
+                  </Label>
                 </div>
 
                 <div className="flex items-start space-x-2 pt-2">

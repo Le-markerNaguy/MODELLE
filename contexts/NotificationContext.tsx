@@ -3,7 +3,6 @@
 import type React from "react"
 import { createContext, useContext, useState, useEffect } from "react"
 import { useAuth } from "./AuthContext"
-import { mockApi } from "@/lib/mock-data" // Remplacer l'API par mockApi
 
 // Types
 interface Notification {
@@ -38,19 +37,16 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
 
   // Charger les notifications
   const fetchNotifications = async () => {
-    if (!isAuthenticated || !user) {
-      return
-    }
-
+    if (!isAuthenticated || !user) return
     setIsLoading(true)
     setError(null)
-
     try {
-      const data = await mockApi.getNotifications(user.id)
+      const res = await fetch(`/api/notifications?userId=${user.id}`)
+      if (!res.ok) throw new Error("Erreur lors du chargement des notifications")
+      const data = await res.json()
       setNotifications(data)
-    } catch (err) {
-      console.error("Erreur lors du chargement des notifications:", err)
-      setError(err instanceof Error ? err : new Error("Erreur lors du chargement des notifications"))
+    } catch (err: any) {
+      setError(err)
     } finally {
       setIsLoading(false)
     }
@@ -59,7 +55,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
   // Marquer une notification comme lue
   const markAsRead = async (id: string) => {
     try {
-      await mockApi.markAsRead(id)
+      await fetch(`/api/notifications/${id}/read`, { method: "POST" })
       setNotifications((prevNotifications) =>
         prevNotifications.map((notif) => (notif.id === id ? { ...notif, lue: true } : notif)),
       )

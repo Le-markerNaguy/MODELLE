@@ -6,11 +6,8 @@ import { Inter } from "next/font/google"
 import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
 import Header from "@/components/header"
-import { Chatbot } from "@/components/chatbot"
 import { AuthProvider } from "@/contexts/AuthContext"
 import { NotificationProvider } from "@/contexts/NotificationContext"
-import { useEffect } from "react"
-import { initializeSampleData } from "@/lib/store"
 import { SessionProvider } from "next-auth/react"
 
 const inter = Inter({ subsets: ["latin"] })
@@ -20,11 +17,6 @@ export default function ClientLayout({
 }: Readonly<{
   children: React.ReactNode
 }>) {
-  // Initialize sample data on client-side
-  useEffect(() => {
-    initializeSampleData()
-  }, [])
-
   return (
     <html lang="fr" suppressHydrationWarning>
       <body className={inter.className}>
@@ -34,7 +26,6 @@ export default function ClientLayout({
               <NotificationProvider>
                 <Header />
                 <main>{children}</main>
-                <Chatbot />
               </NotificationProvider>
             </AuthProvider>
           </ThemeProvider>

@@ -3,8 +3,37 @@ import { Card, CardContent } from "@/components/ui/card"
 import { ArrowLeft, Download, Share2 } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
+import { useEffect, useState } from "react"
 
 export default function CyclePage() {
+  const [resource, setResource] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    setLoading(true)
+    fetch("/api/resources/cycle")
+      .then((res) => {
+        if (!res.ok) throw new Error("Impossible de charger la ressource")
+        return res.json()
+      })
+      .then((data) => {
+        setResource(data)
+        setLoading(false)
+      })
+      .catch((err) => {
+        setError(err.message)
+        setLoading(false)
+      })
+  }, [])
+
+  if (loading) {
+    return <div className="container py-10 max-w-4xl text-center">Chargement...</div>
+  }
+  if (error || !resource) {
+    return <div className="container py-10 max-w-4xl text-center text-red-500">{error || "Ressource introuvable."}</div>
+  }
+
   return (
     <div className="container py-10 max-w-4xl">
       <div className="mb-6">

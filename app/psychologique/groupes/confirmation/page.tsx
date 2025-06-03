@@ -1,17 +1,61 @@
+import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { CheckCircle, Calendar, MapPin, Users } from "lucide-react"
 import Link from "next/link"
 
 export default function GroupeConfirmationPage() {
-  // Dans une application réelle, vous récupéreriez les données du groupe à partir d'une API ou d'une base de données
-  // Ici, nous utilisons des données statiques pour la démonstration
-  const group = {
-    title: "Survivantes de violences",
-    schedule: "Mardi, 18h-20h",
-    location: "Centre Mod'Elles, Libreville",
-    facilitator: "Dr. Sylvie Obame",
-    startDate: "15 avril 2024",
+  const [group, setGroup] = useState<any>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    setIsLoading(true)
+    fetch("/api/support-groups/confirmation")
+      .then((res) => {
+        if (!res.ok) throw new Error("Impossible de charger les détails du groupe")
+        return res.json()
+      })
+      .then((data) => {
+        setGroup(data)
+        setIsLoading(false)
+      })
+      .catch((err) => {
+        setError(err.message)
+        setIsLoading(false)
+      })
+  }, [])
+
+  if (isLoading) {
+    return (
+      <div className="container py-10 max-w-3xl">
+        <Card className="border-2 border-green-100 dark:border-green-900/30">
+          <CardHeader className="text-center">
+            <div className="mx-auto w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mb-4 animate-pulse" />
+            <CardTitle className="text-2xl">Chargement...</CardTitle>
+            <CardDescription>Chargement des détails du groupe...</CardDescription>
+          </CardHeader>
+        </Card>
+      </div>
+    )
+  }
+
+  if (error || !group) {
+    return (
+      <div className="container py-10 max-w-3xl">
+        <Card className="border-2 border-red-100 dark:border-red-900/30">
+          <CardHeader className="text-center">
+            <CardTitle className="text-2xl text-red-600">Erreur</CardTitle>
+            <CardDescription>{error || "Impossible de charger les détails du groupe."}</CardDescription>
+          </CardHeader>
+          <CardFooter className="flex flex-col space-y-3">
+            <Button asChild variant="outline">
+              <Link href="/psychologique">Retour à l'accueil</Link>
+            </Button>
+          </CardFooter>
+        </Card>
+      </div>
+    )
   }
 
   return (

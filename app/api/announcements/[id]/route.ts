@@ -4,7 +4,9 @@ import { authOptions } from "@/lib/auth"
 import prisma from "@/lib/prisma"
 
 // GET /api/announcements/[id] - Récupérer une annonce
-export async function GET(req: Request, { params }: { params: { id: string } }) {
+export async function GET(req: Request, context: { params: { id: string } }) {
+  const { params } = await Promise.resolve(context)
+
   try {
     // Récupérer l'annonce
     const announcement = await prisma.announcement.findUnique({
@@ -44,7 +46,9 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
 }
 
 // PATCH /api/announcements/[id] - Mettre à jour une annonce
-export async function PATCH(req: Request, { params }: { params: { id: string } }) {
+export async function PATCH(req: Request, context: { params: { id: string } }) {
+  const { params } = await Promise.resolve(context)
+
   try {
     const session = await getServerSession(authOptions)
 
@@ -98,7 +102,9 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
 }
 
 // DELETE /api/announcements/[id] - Supprimer une annonce
-export async function DELETE(req: Request, { params }: { params: { id: string } }) {
+export async function DELETE(req: Request, context: { params: { id: string } }) {
+  const { params } = await Promise.resolve(context)
+
   try {
     const session = await getServerSession(authOptions)
 

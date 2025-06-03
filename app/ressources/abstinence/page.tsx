@@ -3,8 +3,37 @@ import { Card, CardContent } from "@/components/ui/card"
 import { ArrowLeft, Download, Share2 } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
+import { useEffect, useState } from "react"
 
 export default function AbstinencePage() {
+  const [resource, setResource] = useState<any>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    setIsLoading(true)
+    fetch("/api/resources/abstinence")
+      .then((res) => {
+        if (!res.ok) throw new Error("Impossible de charger la ressource")
+        return res.json()
+      })
+      .then((data) => {
+        setResource(data)
+        setIsLoading(false)
+      })
+      .catch((err) => {
+        setError(err.message)
+        setIsLoading(false)
+      })
+  }, [])
+
+  if (isLoading) {
+    return <div className="container py-10 max-w-4xl text-center">Chargement...</div>
+  }
+  if (error || !resource) {
+    return <div className="container py-10 max-w-4xl text-center text-red-500">{error || "Ressource introuvable."}</div>
+  }
+
   return (
     <div className="container py-10 max-w-4xl">
       <div className="mb-6">
@@ -15,17 +44,17 @@ export default function AbstinencePage() {
       </div>
 
       <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-4">La Valeur de l'Abstinence</h1>
+        <h1 className="text-3xl font-bold mb-4">{resource.title}</h1>
         <div className="flex items-center text-sm text-muted-foreground mb-6">
-          <span className="mr-4">Publié le 10 février 2024</span>
+          <span className="mr-4">Publié le {new Date(resource.publishedAt).toLocaleDateString()}</span>
           <span className="mr-4">|</span>
-          <span>Catégorie : Article</span>
+          <span>Catégorie : {resource.category}</span>
         </div>
         <div className="relative h-[300px] w-full rounded-lg overflow-hidden mb-8">
           <Image
-            src="/placeholder.svg?height=600&width=1200"
+            src={resource.imageUrl}
             fill
-            alt="La valeur de l'abstinence"
+            alt={resource.imageAlt}
             className="object-cover"
           />
         </div>

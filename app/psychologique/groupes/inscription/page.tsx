@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -39,42 +39,28 @@ export default function GroupeInscriptionPage() {
     notifications: true,
   })
 
-  // Simuler le chargement des données de l'API
-  useState(() => {
+  // Charger les données du groupe depuis l'API
+  useEffect(() => {
     setIsLoading(true)
-
-    // Dans une implémentation réelle, nous utiliserions l'API
-    // api.get(`/groupes/${groupeId}`)
-    //   .then(response => setGroupe(response.data))
-    //   .catch(err => setError("Impossible de charger les détails du groupe"))
-    //   .finally(() => setIsLoading(false))
-
-    // Simulation de données pour la démonstration
-    setTimeout(() => {
-      setGroupe({
-        id: groupeId || "1",
-        titre: "Survivantes de violences",
-        description:
-          "Un espace sécurisé pour les femmes ayant vécu des situations de violence. Ce groupe offre soutien, compréhension et outils pour la guérison et la reconstruction.",
-        horaire: "Mardi, 18h-20h",
-        date_debut: "15 avril 2024",
-        date_fin: "17 juin 2024",
-        duree: "10 séances",
-        lieu: "Centre Mod'Elles, Libreville",
-        facilitateur: "Dr. Sylvie Obame",
-        places_max: 12,
-        places_occupees: 8,
-        image: "/placeholder.svg?height=300&width=600",
-        thematiques: [
-          "Comprendre les traumatismes et leurs effets",
-          "Techniques de gestion des émotions",
-          "Reconstruire l'estime de soi",
-          "Établir des limites saines",
-          "Développer des relations de confiance",
-        ],
-      })
+    setError(null)
+    if (!groupeId) {
+      setError("Aucun groupe sélectionné.")
       setIsLoading(false)
-    }, 1000)
+      return
+    }
+    fetch(`/api/support-groups/${groupeId}`)
+      .then((res) => {
+        if (!res.ok) throw new Error("Impossible de charger les détails du groupe")
+        return res.json()
+      })
+      .then((data) => {
+        setGroupe(data)
+        setIsLoading(false)
+      })
+      .catch((err) => {
+        setError(err.message)
+        setIsLoading(false)
+      })
   }, [groupeId])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {

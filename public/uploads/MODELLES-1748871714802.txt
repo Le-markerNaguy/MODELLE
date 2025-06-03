@@ -1,0 +1,89 @@
+import NextAuth from "next-auth"
+import CredentialsProvider from "next-auth/providers/credentials"
+import { PrismaAdapter } from "@auth/prisma-adapter"
+import prisma from "../../../../lib/prisma"
+import bcrypt from "bcryptjs"
+
+
+export const authOptions = {
+  adapter: PrismaAdapter(prisma),
+  providers: [
+    CredentialsProvider({
+      name: "Credentials",
+      credentials: {
+        email: { label: "Email", type: "email" },
+        password: { label: "Mot de passe", type: "password" },
+      },
+      async authorize(credentials) {
+        try {
+          if (!credentials?.email || !credentials?.password) {
+            console.error("Email ou mot de passe manquant");
+            throw new Error("Email et mot de passe requis");
+          }
+
+          const user = await prisma.user.findUnique({
+            where: { email: credentials.email },
+          });
+
+          if (!user) {
+            console.error(`Utilisateur non trouvé pour l'email: ${credentials.email}`);
+            throw new Error("Utilisateur non trouvé");
+          }
+
+          const isPasswordValid = await bcrypt.compare(credentials.password, user.password);
+
+          if (!isPasswordValid) {
+            console.error("Mot de passe incorrect");
+            throw new Error("Mot de passe incorrect");
+          }
+
+          console.log("Utilisateur authentifié avec succès:", user);
+          return {
+            id: user.id,
+            name: `${user.firstName} ${user.lastName}`, // Construct name from firstName and lastName
+            email: user.email,
+            image: user.image || null, // Provide a default value for image
+            role: user.role,
+          };
+        } catch (error) {
+          if (error instanceof Error) {
+            console.error("Erreur dans authorize:", error.message);
+            throw new Error(error.message || "Erreur d'authentification");
+          } else {
+            console.error("Erreur inconnue dans authorize:", error);
+            throw new Error("Erreur d'authentification inconnue");
+          }
+        }
+      },
+    }),
+  ],
+  session: {
+    strategy: "jwt",
+  },
+  callbacks: {
+    async jwt({ token, user }: { token: any; user?: any }) {
+      if (user) {
+        token.id = user.id;
+        token.role = user.role;
+      }
+      return token;
+    },
+    async session({ session, token }: { session: any; token: any }) {
+      if (!session?.user) {
+        throw new Error("User is not authenticated");
+      }
+      session.user.id = token.id;
+      session.user.role = token.role;
+      return session;
+    },
+  },
+  pages: {
+    signIn: "/connexion",
+    error: "/connexion",
+  },
+  secret: process.env.NEXTAUTH_SECRET,
+}
+
+const handler = NextAuth(authOptions)
+
+export { handler as GET, handler as POST }

@@ -1,3 +1,5 @@
+'use client'
+
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -5,8 +7,90 @@ import { Heart, Calendar, MapPin, MessageCircle } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import Image from "next/image"
 import Link from "next/link"
+import { useEffect, useState } from "react"
 
 export default function PsychologiquePage() {
+  const [psychologists, setPsychologists] = useState<any[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [resources, setResources] = useState<any[]>([])
+  const [isLoadingResources, setIsLoadingResources] = useState(true)
+  const [errorResources, setErrorResources] = useState<string | null>(null)
+  const [groups, setGroups] = useState<any[]>([])
+  const [isLoadingGroups, setIsLoadingGroups] = useState(true)
+  const [errorGroups, setErrorGroups] = useState<string | null>(null)
+  const [workshops, setWorkshops] = useState<any[]>([])
+  const [isLoadingWorkshops, setIsLoadingWorkshops] = useState(true)
+  const [errorWorkshops, setErrorWorkshops] = useState<string | null>(null)
+
+  useEffect(() => {
+    setIsLoading(true)
+    fetch("/api/professionals?type=psychologue")
+      .then((res) => {
+        if (!res.ok) throw new Error("Impossible de charger la liste des psychologues")
+        return res.json()
+      })
+      .then((data) => {
+        setPsychologists(Array.isArray(data) ? data : [])
+        setIsLoading(false)
+      })
+      .catch((err) => {
+        setError(err.message)
+        setIsLoading(false)
+      })
+  }, [])
+
+  useEffect(() => {
+    setIsLoadingResources(true)
+    fetch("/api/resources")
+      .then((res) => {
+        if (!res.ok) throw new Error("Impossible de charger les ressources")
+        return res.json()
+      })
+      .then((data) => {
+        setResources(Array.isArray(data) ? data : [])
+        setIsLoadingResources(false)
+      })
+      .catch((err) => {
+        setErrorResources(err.message)
+        setIsLoadingResources(false)
+      })
+  }, [])
+
+  useEffect(() => {
+    setIsLoadingGroups(true)
+    fetch("/api/support-groups")
+      .then((res) => {
+        if (!res.ok) throw new Error("Impossible de charger les groupes de soutien")
+        return res.json()
+      })
+      .then((data) => {
+        setGroups(Array.isArray(data) ? data : [])
+        setIsLoadingGroups(false)
+      })
+      .catch((err) => {
+        setErrorGroups(err.message)
+        setIsLoadingGroups(false)
+      })
+  }, [])
+
+  useEffect(() => {
+    setIsLoadingWorkshops(true)
+    fetch("/api/workshops")
+      .then((res) => {
+        if (!res.ok) throw new Error("Impossible de charger les ateliers")
+        return res.json()
+      })
+      .then((data) => {
+        setWorkshops(Array.isArray(data) ? data : [])
+        setIsLoadingWorkshops(false)
+      })
+      .catch((err) => {
+        setErrorWorkshops(err.message)
+        setIsLoadingWorkshops(false)
+      })
+  }, [])
+
   return (
     <div className="container py-10 max-w-6xl">
       <div className="flex flex-col items-center text-center mb-10 space-y-4">
@@ -63,132 +147,64 @@ export default function PsychologiquePage() {
         </TabsList>
 
         <TabsContent value="psychologues">
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 mt-6">
-            <PsychologistCard
-              name="Dr. Émilie Ntoutoume"
-              specialty="Traumatismes et SSPT"
-              experience="12 ans d'expérience"
-              availability="Lun, Mer, Ven: 9h-17h"
-              imageUrl="/placeholder.svg?height=200&width=200"
-            />
-            <PsychologistCard
-              name="Dr. Marc Ondo"
-              specialty="Thérapie familiale"
-              experience="15 ans d'expérience"
-              availability="Mar, Jeu: 8h-16h"
-              imageUrl="/placeholder.svg?height=200&width=200"
-            />
-            <PsychologistCard
-              name="Dr. Claire Mba"
-              specialty="Anxiété et dépression"
-              experience="10 ans d'expérience"
-              availability="Lun, Mar, Jeu: 10h-18h"
-              imageUrl="/placeholder.svg?height=200&width=200"
-            />
-            <PsychologistCard
-              name="Dr. Thomas Ndong"
-              specialty="Thérapie cognitivo-comportementale"
-              experience="8 ans d'expérience"
-              availability="Mer, Ven: 9h-15h"
-              imageUrl="/placeholder.svg?height=200&width=200"
-            />
-            <PsychologistCard
-              name="Dr. Sylvie Obame"
-              specialty="Violences basées sur le genre"
-              experience="14 ans d'expérience"
-              availability="Lun, Mar, Mer: 8h-16h"
-              imageUrl="/placeholder.svg?height=200&width=200"
-            />
-            <PsychologistCard
-              name="Dr. Jean Moussavou"
-              specialty="Addictions et dépendances"
-              experience="11 ans d'expérience"
-              availability="Jeu, Ven: 10h-18h"
-              imageUrl="/placeholder.svg?height=200&width=200"
-            />
-          </div>
+          {isLoading ? (
+            <div className="text-center text-muted-foreground py-8">Chargement des psychologues...</div>
+          ) : error ? (
+            <div className="text-center text-red-500 py-8">{error}</div>
+          ) : (
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 mt-6">
+              {psychologists.map((psy: any) => (
+                <PsychologistCard
+                  key={psy.id}
+                  name={psy.name}
+                  specialty={psy.specialty}
+                  experience={psy.experience}
+                  availability={psy.availability}
+                  imageUrl={psy.imageUrl || "/placeholder.svg?height=200&width=200"}
+                />
+              ))}
+            </div>
+          )}
         </TabsContent>
 
         <TabsContent value="resources">
-          <div className="grid gap-6 md:grid-cols-2 mt-6">
-            <ResourceCard
-              title="Guide de gestion du stress"
-              type="Guide"
-              description="Techniques et exercices pratiques pour gérer le stress quotidien et réduire l'anxiété."
-              imageUrl="/placeholder.svg?height=200&width=300"
-            />
-            <ResourceCard
-              title="Comprendre et surmonter un traumatisme"
-              type="E-book"
-              description="Ressources pour comprendre les effets du traumatisme et les étapes vers la guérison."
-              imageUrl="/placeholder.svg?height=200&width=300"
-            />
-            <ResourceCard
-              title="Méditation guidée pour l'anxiété"
-              type="Audio"
-              description="Séances de méditation guidée pour aider à calmer l'anxiété et retrouver la sérénité."
-              imageUrl="/placeholder.svg?height=200&width=300"
-            />
-            <ResourceCard
-              title="Journal de gratitude et d'affirmations"
-              type="Outil pratique"
-              description="Un journal à imprimer pour cultiver la gratitude et renforcer l'estime de soi au quotidien."
-              imageUrl="/placeholder.svg?height=200&width=300"
-            />
-            <ResourceCard
-              title="Reconnaître les signes de dépression"
-              type="Guide"
-              description="Comment identifier les symptômes de la dépression et quand chercher de l'aide professionnelle."
-              imageUrl="/placeholder.svg?height=200&width=300"
-            />
-            <ResourceCard
-              title="Techniques d'auto-apaisement"
-              type="Vidéo"
-              description="Exercices pratiques pour s'apaiser lors de moments de détresse émotionnelle intense."
-              imageUrl="/placeholder.svg?height=200&width=300"
-            />
-          </div>
+          {isLoadingResources ? (
+            <div className="text-center text-muted-foreground py-8">Chargement des ressources...</div>
+          ) : errorResources ? (
+            <div className="text-center text-red-500 py-8">{errorResources}</div>
+          ) : (
+            <div className="grid gap-6 md:grid-cols-2 mt-6">
+              {resources.map((res: any) => (
+                <ResourceCard
+                  key={res.id}
+                  title={res.title}
+                  type={res.type}
+                  description={res.description}
+                  imageUrl={res.imageUrl || "/placeholder.svg?height=200&width=300"}
+                />
+              ))}
+            </div>
+          )}
         </TabsContent>
 
         <TabsContent value="groupes">
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 mt-6">
-            <GroupCard
-              title="Survivantes de violences"
-              schedule="Mardi, 18h-20h"
-              location="Centre Mod'Elles, Libreville"
-              facilitator="Dr. Sylvie Obame"
-            />
-            <GroupCard
-              title="Gestion de l'anxiété"
-              schedule="Jeudi, 17h-19h"
-              location="En ligne (Zoom)"
-              facilitator="Dr. Claire Mba"
-            />
-            <GroupCard
-              title="Deuil et perte"
-              schedule="Samedi, 10h-12h"
-              location="Centre Mod'Elles, Libreville"
-              facilitator="Dr. Marc Ondo"
-            />
-            <GroupCard
-              title="Parentalité positive"
-              schedule="Mercredi, 18h-20h"
-              location="Centre Mod'Elles, Libreville"
-              facilitator="Dr. Thomas Ndong"
-            />
-            <GroupCard
-              title="Estime de soi et confiance"
-              schedule="Lundi, 17h-19h"
-              location="Centre Mod'Elles, Libreville"
-              facilitator="Dr. Émilie Ntoutoume"
-            />
-            <GroupCard
-              title="Jeunes femmes (18-25 ans)"
-              schedule="Vendredi, 16h-18h"
-              location="En ligne (Zoom)"
-              facilitator="Dr. Jean Moussavou"
-            />
-          </div>
+          {isLoadingGroups ? (
+            <div className="text-center text-muted-foreground py-8">Chargement des groupes de soutien...</div>
+          ) : errorGroups ? (
+            <div className="text-center text-red-500 py-8">{errorGroups}</div>
+          ) : (
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 mt-6">
+              {groups.map((group: any) => (
+                <GroupCard
+                  key={group.id}
+                  title={group.name}
+                  schedule={group.schedule}
+                  location={group.location}
+                  facilitator={group.facilitatorName}
+                />
+              ))}
+            </div>
+          )}
         </TabsContent>
       </Tabs>
 
@@ -242,26 +258,23 @@ export default function PsychologiquePage() {
           Participez à nos ateliers pour développer des compétences d'adaptation et améliorer votre bien-être
           émotionnel.
         </p>
-        <div className="grid gap-6 md:grid-cols-3">
-          <WorkshopCard
-            title="Gestion du stress et relaxation"
-            date="18 avril 2024"
-            location="Centre Mod'Elles, Libreville"
-            imageUrl="/placeholder.svg?height=200&width=300"
-          />
-          <WorkshopCard
-            title="Communication assertive"
-            date="25 avril 2024"
-            location="En ligne (Zoom)"
-            imageUrl="/placeholder.svg?height=200&width=300"
-          />
-          <WorkshopCard
-            title="Pleine conscience et méditation"
-            date="2 mai 2024"
-            location="Centre Mod'Elles, Libreville"
-            imageUrl="/placeholder.svg?height=200&width=300"
-          />
-        </div>
+        {isLoadingWorkshops ? (
+          <div className="text-center text-muted-foreground py-8">Chargement des ateliers...</div>
+        ) : errorWorkshops ? (
+          <div className="text-center text-red-500 py-8">{errorWorkshops}</div>
+        ) : (
+          <div className="grid gap-6 md:grid-cols-3">
+            {workshops.map((workshop: any) => (
+              <WorkshopCard
+                key={workshop.id}
+                title={workshop.title}
+                date={workshop.date}
+                location={workshop.location}
+                imageUrl={workshop.imageUrl || "/placeholder.svg?height=200&width=300"}
+              />
+            ))}
+          </div>
+        )}
       </div>
 
       <Card>

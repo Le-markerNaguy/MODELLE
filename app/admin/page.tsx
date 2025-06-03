@@ -1,6 +1,8 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { useToast } from "@/hooks/use-toast"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from "@/components/ui/dialog"
 
 interface User {
   id: string
@@ -167,6 +169,28 @@ export default function AdminPage() {
 }
 
 function DashboardTab() {
+  const [activities, setActivities] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState("")
+
+  useEffect(() => {
+    setLoading(true)
+    fetch("/api/notifications")
+      .then((res) => {
+        if (!res.ok) throw new Error("Erreur lors du chargement des activités récentes")
+        return res.json()
+      })
+      .then((data) => {
+        // Correction ici : toujours un tableau
+        setActivities(Array.isArray(data) ? data : [])
+        setLoading(false)
+      })
+      .catch((err) => {
+        setError(err.message)
+        setLoading(false)
+      })
+  }, [])
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -267,38 +291,33 @@ function DashboardTab() {
           <CardDescription>Les dernières actions sur la plateforme</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            <div className="flex items-start gap-4">
-              <div className="rounded-full bg-pink-100 p-2">
-                <Calendar className="h-4 w-4 text-pink-600" />
-              </div>
-              <div>
-                <p className="font-medium">Nouveau rendez-vous</p>
-                <p className="text-sm text-muted-foreground">Marie K. a pris rendez-vous avec Dr. Émilie Ntoutoume</p>
-                <p className="text-xs text-muted-foreground">Il y a 10 minutes</p>
-              </div>
+          {loading ? (
+            <div>Chargement...</div>
+          ) : error ? (
+            <div className="text-red-500">{error}</div>
+          ) : (
+            <div className="space-y-4">
+              {activities.length === 0 ? (
+                <div className="text-muted-foreground">Aucune activité récente</div>
+              ) : (
+                activities.map((activity, idx) => (
+                  <div className="flex items-start gap-4" key={activity.id || idx}>
+                    <div className={`rounded-full p-2 ${activity.type === "appointment" ? "bg-pink-100" : activity.type === "user" ? "bg-pink-100" : activity.type === "group" ? "bg-pink-100" : "bg-gray-100"}`}>
+                      {activity.type === "appointment" && <Calendar className="h-4 w-4 text-pink-600" />}
+                      {activity.type === "user" && <Users className="h-4 w-4 text-pink-600" />}
+                      {activity.type === "group" && <Heart className="h-4 w-4 text-pink-600" />}
+                      {!["appointment","user","group"].includes(activity.type) && <Bell className="h-4 w-4 text-pink-600" />}
+                    </div>
+                    <div>
+                      <p className="font-medium">{activity.title || activity.type}</p>
+                      <p className="text-sm text-muted-foreground">{activity.message}</p>
+                      <p className="text-xs text-muted-foreground">{activity.date ? timeAgo(activity.date) : ""}</p>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
-            <div className="flex items-start gap-4">
-              <div className="rounded-full bg-pink-100 p-2">
-                <Users className="h-4 w-4 text-pink-600" />
-              </div>
-              <div>
-                <p className="font-medium">Nouvelle inscription</p>
-                <p className="text-sm text-muted-foreground">Sophie T. a créé un compte</p>
-                <p className="text-xs text-muted-foreground">Il y a 45 minutes</p>
-              </div>
-            </div>
-            <div className="flex items-start gap-4">
-              <div className="rounded-full bg-pink-100 p-2">
-                <Heart className="h-4 w-4 text-pink-600" />
-              </div>
-              <div>
-                <p className="font-medium">Inscription à un groupe</p>
-                <p className="text-sm text-muted-foreground">Jeanne M. a rejoint le groupe "Gestion de l'anxiété"</p>
-                <p className="text-xs text-muted-foreground">Il y a 2 heures</p>
-              </div>
-            </div>
-          </div>
+          )}
         </CardContent>
       </Card>
     </div>
@@ -609,6 +628,13 @@ function GroupsTab() {
   const [groups, setGroups] = useState<SupportGroup[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
+  const [open, setOpen] = useState(false)
+  const [form, setForm] = useState({ name: "", description: "", capacity: 10, schedule: "", period: "", facilitatorId: "" })
+  const [imageFile, setImageFile] = useState<File | null>(null)
+  const [submitting, setSubmitting] = useState(false)
+  const [formErrors, setFormErrors] = useState<{ [key: string]: string }>({})
+  const [facilitators, setFacilitators] = useState<{ id: string; name: string }[]>([])
+  const { toast } = useToast()
 
   useEffect(() => {
     setLoading(true)
@@ -627,17 +653,136 @@ function GroupsTab() {
       })
   }, [])
 
+  useEffect(() => {
+    // Charger la liste des animateurs pour le select
+    fetch("/api/professionals")
+      .then((res) => res.ok ? res.json() : [])
+      .then((data) => setFacilitators(data.map((p: any) => ({ id: p.id, name: p.name || (p.firstName + ' ' + p.lastName) }))))
+      .catch(() => setFacilitators([]))
+  }, [])
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    setForm({ ...form, [e.target.name]: e.target.value })
+  }
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { files } = e.target
+    if (!files || files.length === 0) return
+    setImageFile(files[0])
+  }
+
+  const validateForm = () => {
+    const errors: { [key: string]: string } = {}
+    if (!form.name.trim()) errors.name = "Le nom du groupe est requis."
+    if (!form.description.trim()) errors.description = "La description est requise."
+    if (!form.schedule.trim()) errors.schedule = "L'horaire est requis."
+    if (!form.period.trim()) errors.period = "La période est requise."
+    if (!form.facilitatorId) errors.facilitatorId = "Veuillez sélectionner un animateur."
+    if (!form.capacity || isNaN(Number(form.capacity)) || Number(form.capacity) < 1) errors.capacity = "Capacité invalide."
+    setFormErrors(errors)
+    return Object.keys(errors).length === 0
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!validateForm()) return
+    setSubmitting(true)
+    try {
+      let imageUrl = ""
+      if (imageFile) {
+        const fd = new FormData()
+        fd.append("file", imageFile)
+        const res = await fetch("/api/resources/upload", { method: "POST", body: fd })
+        if (!res.ok) throw new Error("Erreur lors de l'upload de l'image")
+        imageUrl = (await res.json()).url
+      }
+      const res = await fetch("/api/support-groups", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...form, imageUrl }),
+      })
+      if (!res.ok) throw new Error("Erreur lors de la création du groupe")
+      toast({ title: "Groupe créé", description: "Le groupe de soutien a bien été enregistré." })
+      setOpen(false)
+      setForm({ name: "", description: "", capacity: 10, schedule: "", period: "", facilitatorId: "" })
+      setImageFile(null)
+      setFormErrors({})
+      // Rafraîchir la liste
+      const data = await fetch("/api/support-groups").then(r => r.json())
+      setGroups(data)
+    } catch (err: any) {
+      toast({ title: "Erreur", description: err.message, variant: "destructive" })
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-3xl font-bold">Gestion des groupes de soutien</h2>
-        <div className="flex items-center gap-2">
-          <Button className="bg-pink-600 hover:bg-pink-700">
-            <Plus className="h-4 w-4 mr-2" />
-            Créer un groupe
-          </Button>
-        </div>
+        <Button className="bg-pink-600 hover:bg-pink-700" onClick={() => setOpen(true)}>
+          <Plus className="h-4 w-4 mr-2" />
+          Créer un groupe
+        </Button>
       </div>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Nouveau groupe de soutien</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleSubmit} className="space-y-4" autoComplete="off">
+            <div>
+              <Label htmlFor="name">Nom du groupe</Label>
+              <Input id="name" name="name" value={form.name} onChange={handleChange} placeholder="Ex: Groupe d'écoute et de parole" required aria-invalid={!!formErrors.name} aria-describedby="name-error" />
+              {formErrors.name && <p className="text-red-500 text-xs mt-1" id="name-error">{formErrors.name}</p>}
+            </div>
+            <div>
+              <Label htmlFor="description">Description</Label>
+              <textarea id="description" name="description" value={form.description} onChange={handleChange} placeholder="Décrivez le but et le fonctionnement du groupe..." className="w-full border rounded p-2" rows={3} required aria-invalid={!!formErrors.description} aria-describedby="desc-error" />
+              {formErrors.description && <p className="text-red-500 text-xs mt-1" id="desc-error">{formErrors.description}</p>}
+            </div>
+            <div className="flex gap-4">
+              <div className="flex-1">
+                <Label htmlFor="capacity">Capacité</Label>
+                <Input id="capacity" name="capacity" type="number" min={1} value={form.capacity} onChange={handleChange} required aria-invalid={!!formErrors.capacity} aria-describedby="cap-error" placeholder="Nombre maximum de participants" />
+                {formErrors.capacity && <p className="text-red-500 text-xs mt-1" id="cap-error">{formErrors.capacity}</p>}
+              </div>
+              
+            </div>
+            <div className="flex gap-4">
+              <div className="flex-1">
+                <Label htmlFor="schedule">Horaire</Label>
+                <Input id="schedule" name="schedule" value={form.schedule} onChange={handleChange} placeholder="Ex: Tous les mardis à 18h" required aria-invalid={!!formErrors.schedule} aria-describedby="sched-error" />
+                {formErrors.schedule && <p className="text-red-500 text-xs mt-1" id="sched-error">{formErrors.schedule}</p>}
+              </div>
+              <div className="flex-1">
+                <Label htmlFor="period">Période</Label>
+                <Input id="period" name="period" value={form.period} onChange={handleChange} placeholder="Ex: Juin - Août 2025" required aria-invalid={!!formErrors.period} aria-describedby="period-error" />
+                {formErrors.period && <p className="text-red-500 text-xs mt-1" id="period-error">{formErrors.period}</p>}
+              </div>
+            </div>
+            <div>
+              <Label htmlFor="image">Image du groupe</Label>
+              <Input id="image" name="image" type="file" accept="image/*" onChange={handleFileChange} />
+              {imageFile && (
+                <div className="mt-2 flex items-center gap-2">
+                  <img src={URL.createObjectURL(imageFile)} alt="Aperçu" className="h-16 w-16 object-cover rounded" />
+                  <Button type="button" variant="outline" size="sm" onClick={() => setImageFile(null)}>Retirer</Button>
+                </div>
+              )}
+            </div>
+            <DialogFooter>
+              <Button type="submit" disabled={submitting} className="bg-pink-600 hover:bg-pink-700 w-full">
+                {submitting ? "Enregistrement..." : "Enregistrer"}
+              </Button>
+              <DialogClose asChild>
+                <Button type="button" variant="outline">Annuler</Button>
+              </DialogClose>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
@@ -770,6 +915,13 @@ function ResourcesTab() {
   const [resources, setResources] = useState<Resource[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
+  const [open, setOpen] = useState(false)
+  const [form, setForm] = useState({ title: "", type: "", category: "", description: "", content: "" })
+  const [imageFile, setImageFile] = useState<File | null>(null)
+  const [documentFile, setDocumentFile] = useState<File | null>(null)
+  const [videoFile, setVideoFile] = useState<File | null>(null)
+  const [submitting, setSubmitting] = useState(false)
+  const { toast } = useToast()
 
   useEffect(() => {
     setLoading(true)
@@ -788,15 +940,134 @@ function ResourcesTab() {
       })
   }, [])
 
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    setForm({ ...form, [e.target.name]: e.target.value })
+  }
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, files } = e.target
+    if (!files || files.length === 0) return
+    if (name === "image") setImageFile(files[0])
+    if (name === "document") setDocumentFile(files[0])
+    if (name === "video") setVideoFile(files[0])
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setSubmitting(true)
+    try {
+      // Upload files if present
+      let imageUrl = ""
+      let documentUrl = ""
+      let videoUrl = ""
+      if (imageFile) {
+        const fd = new FormData()
+        fd.append("file", imageFile)
+        const res = await fetch("/api/resources/upload", { method: "POST", body: fd })
+        if (!res.ok) throw new Error("Erreur lors de l'upload de l'image")
+        imageUrl = (await res.json()).url
+      }
+      if (documentFile) {
+        const fd = new FormData()
+        fd.append("file", documentFile)
+        const res = await fetch("/api/resources/upload", { method: "POST", body: fd })
+        if (!res.ok) throw new Error("Erreur lors de l'upload du document")
+        documentUrl = (await res.json()).url
+      }
+      if (videoFile) {
+        const fd = new FormData()
+        fd.append("file", videoFile)
+        const res = await fetch("/api/resources/upload", { method: "POST", body: fd })
+        if (!res.ok) throw new Error("Erreur lors de l'upload de la vidéo")
+        videoUrl = (await res.json()).url
+      }
+      // Créer la ressource avec les URLs
+      const content = form.content && form.content.trim() ? form.content : form.description || form.title
+      const res = await fetch("/api/resources", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ ...form, content, imageUrl, documentUrl, videoUrl }),
+      })
+      if (!res.ok) throw new Error("Erreur lors de l'ajout de la ressource")
+      toast({ title: "Ressource ajoutée", description: "La ressource a bien été enregistrée." })
+      setOpen(false)
+      setForm({ title: "", type: "", category: "", description: "", content: "" })
+      setImageFile(null)
+      setDocumentFile(null)
+      setVideoFile(null)
+      // Rafraîchir la liste
+      const data = await fetch("/api/resources").then(r => r.json())
+      setResources(data)
+    } catch (err: any) {
+      toast({ title: "Erreur", description: err.message, variant: "destructive" })
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-3xl font-bold">Gestion des ressources</h2>
-        <Button className="bg-pink-600 hover:bg-pink-700">
+        <Button className="bg-pink-600 hover:bg-pink-700" onClick={() => setOpen(true)}>
           <Plus className="h-4 w-4 mr-2" />
           Ajouter une ressource
         </Button>
       </div>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Nouvelle ressource</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleSubmit} className="space-y-3" autoComplete="off">
+            <div className="flex gap-3">
+              <div className="flex-1">
+                <Label htmlFor="title">Titre</Label>
+                <Input id="title" name="title" value={form.title} onChange={handleChange} placeholder="Titre" required />
+              </div>
+              <div className="flex-1">
+                <Label htmlFor="type">Type</Label>
+                <Input id="type" name="type" value={form.type} onChange={handleChange} placeholder="Type" required />
+              </div>
+              <div className="flex-1">
+                <Label htmlFor="category">Catégorie</Label>
+                <Input id="category" name="category" value={form.category} onChange={handleChange} placeholder="Catégorie" required />
+              </div>
+            </div>
+            <div>
+              <Label htmlFor="description">Description</Label>
+              <textarea id="description" name="description" value={form.description} onChange={handleChange} placeholder="Description" className="w-full border rounded p-2" rows={2} required />
+            </div>
+            <input type="hidden" name="content" value={form.content || form.description || form.title} />
+            <div className="flex gap-3 items-end">
+              <div className="flex-1">
+                <Label htmlFor="image">Image</Label>
+                <Input id="image" name="image" type="file" accept="image/*" onChange={handleFileChange} />
+                {imageFile && <img src={URL.createObjectURL(imageFile)} alt="Aperçu" className="h-10 w-10 object-cover rounded mt-1" />}
+              </div>
+              <div className="flex-1">
+                <Label htmlFor="document">Doc</Label>
+                <Input id="document" name="document" type="file" accept="application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" onChange={handleFileChange} />
+                {documentFile && <span className="text-xs block mt-1">{documentFile.name}</span>}
+              </div>
+              <div className="flex-1">
+                <Label htmlFor="video">Vidéo</Label>
+                <Input id="video" name="video" type="file" accept="video/*" onChange={handleFileChange} />
+                {videoFile && <span className="text-xs block mt-1">{videoFile.name}</span>}
+              </div>
+            </div>
+            <DialogFooter>
+              <Button type="submit" disabled={submitting} className="bg-pink-600 hover:bg-pink-700 w-full">
+                {submitting ? "Enregistrement..." : "Enregistrer"}
+              </Button>
+              <DialogClose asChild>
+                <Button type="button" variant="outline">Annuler</Button>
+              </DialogClose>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
@@ -1098,4 +1369,15 @@ function SettingsTab() {
       </Tabs>
     </div>
   )
+}
+
+// Helper pour afficher "il y a ..."
+function timeAgo(dateString: string) {
+  const date = new Date(dateString)
+  const now = new Date()
+  const diff = Math.floor((now.getTime() - date.getTime()) / 1000)
+  if (diff < 60) return `Il y a ${diff} secondes`
+  if (diff < 3600) return `Il y a ${Math.floor(diff/60)} minutes`
+  if (diff < 86400) return `Il y a ${Math.floor(diff/3600)} heures`
+  return date.toLocaleDateString()
 }
