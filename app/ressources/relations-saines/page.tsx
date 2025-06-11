@@ -1,11 +1,7 @@
-import type { Metadata } from "next"
+"use client"
+
 import { useEffect, useState } from "react"
 import ResourceMedia from "@/components/resource-media"
-
-export const metadata: Metadata = {
-  title: "Relations Saines | Modelles",
-  description: "Ressources sur les relations saines, la communication et le respect mutuel",
-}
 
 export default function RelationsSainesPage() {
   const [resource, setResource] = useState<any>(null)

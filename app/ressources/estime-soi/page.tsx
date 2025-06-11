@@ -1,11 +1,7 @@
-import type { Metadata } from "next"
+"use client"
+
 import ResourceMedia from "@/components/resource-media"
 import { useEffect, useState } from "react"
-
-export const metadata: Metadata = {
-  title: "Estime de Soi | Modelles",
-  description: "Ressources pour développer une image positive de soi et renforcer sa confiance",
-}
 
 export default function EstimeDeSoiPage() {
   const [resource, setResource] = useState<any>(null)

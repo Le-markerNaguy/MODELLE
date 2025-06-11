@@ -10,8 +10,9 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 // ======================
@@ -213,9 +214,9 @@ model Professional {
   updatedAt        DateTime         @updatedAt
 
   // Relations
-  appointments  Appointment[]
   workshops     Workshop[]
   supportGroups SupportGroup[]
+  appointments  Appointment[]
 }
 
 // ----------------------
@@ -231,11 +232,18 @@ model Appointment {
   createdAt DateTime          @default(now())
   updatedAt DateTime          @updatedAt
 
+  // Champs pour prise de rendez-vous public
+  nom       String?
+  email     String?
+  telephone String?
+
   // Relations
   userId         String
-  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  professionalId String
-  professional   Professional @relation(fields: [professionalId], references: [id], onDelete: Cascade)
+  user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  healthCenterId String?
+  healthCenter   HealthCenter? @relation(fields: [healthCenterId], references: [id], onDelete: Cascade)
+  professionalId String?
+  professional   Professional? @relation(fields: [professionalId], references: [id], onDelete: Cascade)
 }
 
 // ----------------------
@@ -428,6 +436,9 @@ model HealthCenter {
   isVerified  Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+
+  // Nouvelle relation
+  appointments Appointment[]
 }
 
 // ----------------------
@@ -490,4 +501,15 @@ model Donation {
   message       String?
   receiptNeeded Boolean  @default(false)
   createdAt     DateTime @default(now())
+}
+
+model PublicAppointment {
+  id        String   @id @default(cuid())
+  nom       String
+  email     String
+  telephone String
+  motif     String
+  date      DateTime
+  heure     String
+  createdAt DateTime @default(now())
 }

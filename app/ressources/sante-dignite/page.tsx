@@ -1,11 +1,7 @@
-import type { Metadata } from "next"
+"use client"
+
 import ResourceMedia from "@/components/resource-media"
 import { useEffect, useState } from "react"
-
-export const metadata: Metadata = {
-  title: "Santé et Dignité | Modelles",
-  description: "Ressources sur la santé menstruelle, le bien-être et la dignité personnelle",
-}
 
 export default function SanteDigniteePage() {
   const [resource, setResource] = useState<any>(null)
