@@ -188,4 +188,40 @@ export default function AtelierPage() {
                       <p className="text-sm font-medium">Ce que vous apprendrez :</p>
                       <ul className="text-sm space-y-1">
                         <li className="flex items-start">
-                          <CheckCircle className="h-4 w-\
+                          <CheckCircle className="h-4 w-4" />
+                          <span>Comprendre les mécanismes du stress et ses impacts sur le corps et l'esprit</span>
+                        </li>
+                        <li className="flex items-start">
+                          <CheckCircle className="h-4 w-4" />
+                          <span>Identifier vos propres déclencheurs de stress et vos réactions habituelles</span>
+                        </li>
+                        <li className="flex items-start">
+                          <CheckCircle className="h-4 w-4" />
+                          <span>Apprendre et pratiquer diverses techniques de relaxation et de respiration</span>
+                        </li>
+                        <li className="flex items-start">
+                          <CheckCircle className="h-4 w-4" />
+                          <span>Développer des stratégies personnalisées de gestion du stress au quotidien</span>
+                        </li>
+                        <li className="flex items-start">
+                          <CheckCircle className="h-4 w-4" />
+                          <span>Créer un plan d'action pour intégrer ces pratiques dans votre vie</span>
+                        </li>
+                      </ul>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    <p className="text-sm">
+                      Vous êtes inscrit à l'atelier. Nous vous attendons nombreux !
+                    </p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
