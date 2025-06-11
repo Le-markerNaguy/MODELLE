@@ -9,8 +9,10 @@ import Header from "@/components/header"
 import { AuthProvider } from "@/contexts/AuthContext"
 import { NotificationProvider } from "@/contexts/NotificationContext"
 import { SessionProvider } from "next-auth/react"
+import dynamic from "next/dynamic"
 
 const inter = Inter({ subsets: ["latin"] })
+const ChatbotEstelle = dynamic(() => import("@/components/chatbot-estelle"), { ssr: false })
 
 export default function ClientLayout({
   children,
@@ -26,6 +28,7 @@ export default function ClientLayout({
               <NotificationProvider>
                 <Header />
                 <main>{children}</main>
+                <ChatbotEstelle />
               </NotificationProvider>
             </AuthProvider>
           </ThemeProvider>
